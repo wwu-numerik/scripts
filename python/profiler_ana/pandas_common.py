@@ -8,8 +8,10 @@ from matplotlib.lines import Line2D
 from matplotlib import cm
 import itertools
 
-timings = ['usr', 'mix', 'sys', 'wall']
-measures = ['max', 'avg']
+TIMINGS = ['usr', 'mix', 'sys', 'wall']
+MEASURES = ['max', 'avg']
+SPECIALS = ['run', 'threads', 'ranks']
+
 
 def make_val(val, round_digits=3):
     try:
@@ -18,7 +20,9 @@ def make_val(val, round_digits=3):
         return str(val)
 
 
-def m_strip(s):
+def m_strip(s, timings=None, measures=None):
+    timings = timings or TIMINGS
+    measures = measures or MEASURES
     for t,m in itertools.product(timings, measures):
         s = s.replace('_{}_{}'.format(m, t), '')
     return s
@@ -50,34 +54,37 @@ def read_files(dirnames):
     return headerlist, current
 
 
-def sorted(frame, ascending=True, sort_cols=None):
+def sorted_f(frame, ascending=True, sort_cols=None):
     sort_cols = sort_cols or ['ranks', 'threads']
     return frame.sort(columns=sort_cols, na_position='last', ascending=ascending)
 
 
-def speedup(headerlist, current, specials, baseline_name, round_digits=3):
-  t_sections = set([m_strip(h) for h in headerlist]) - set(specials)
+def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, timings=None, measures=None):
+    timings = timings or TIMINGS
+    measures = measures or MEASURES
+    specials = specials or SPECIALS
+    t_sections = set([m_strip(h) for h in headerlist]) - set(specials)
 
-  for sec in t_sections:
-      for t, m in itertools.product(timings, measures):
-          source_col = '{}_{}_{}'.format(sec, m, t)
-          source = current[source_col]
+    for sec in t_sections:
+        for t, m in itertools.product(timings, measures):
+            source_col = '{}_{}_{}'.format(sec, m, t)
+            source = current[source_col]
 
-          speedup_col = source_col + '_speedup'
-          ref_value = source[0]
-          values = [round(ref_value/source[i], round_digits) for i in range(len(source))]
-          current[speedup_col] = pd.Series(values)
+            speedup_col = source_col + '_speedup'
+            ref_value = source[0]
+            values = [round(ref_value / source[i], round_digits) for i in range(len(source))]
+            current[speedup_col] = pd.Series(values)
 
-          abspart_col = source_col + '_abspart'
-          ref_value = lambda i: float(current['{}_{}_{}'.format(baseline_name, m, t)][i])
-          values = [round(source[i]/ref_value(i), round_digits) for i in range(len(source))]
-          current[abspart_col] = pd.Series(values)
-  ref_value = 1
-  cmp_value = lambda i: current['ranks'][i] / current['threads'][i]
-  values = [cmp_value(i)/cmp_value(0) for i in range(0, len(source))] #+ [np.NaN]
-  current.insert(len(specials), 'ideal_speedup', pd.Series(values))
-  current = sorted(current, True)
-  return current
+            abspart_col = source_col + '_abspart'
+            ref_value = lambda i: float(current['{}_{}_{}'.format(baseline_name, m, t)][i])
+            values = [round(source[i] / ref_value(i), round_digits) for i in range(len(source))]
+            current[abspart_col] = pd.Series(values)
+    ref_value = 1
+    cmp_value = lambda i: current['ranks'][i] / current['threads'][i]
+    values = [cmp_value(i) / cmp_value(0) for i in range(0, len(source))]  # + [np.NaN]
+    current.insert(len(specials), 'ideal_speedup', pd.Series(values))
+    current = sorted_f(current, True)
+    return current
 
 def plot_msfem(current, merged, headerlist):
     categories = ['all', 'coarse.solve', 'local.solve_for_all_cells', 'coarse.assemble']
