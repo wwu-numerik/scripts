@@ -23,3 +23,11 @@ print(current.columns.values)
 current = current.loc[:, pc.SPECIALS + cols + ['ideal_speedup']]
 # pprint(t_sections)
 current.transpose().to_csv(merged)
+
+def plot_mlmc(current, filename_base):
+    categories = ['all']
+    ycols = ['mlmc.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
+    labels = ['Overall'] + ['Ideal']
+    pc.plot_common(current, merged, ycols, labels)
+
+plot_mlmc(current, merged)

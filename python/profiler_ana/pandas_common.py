@@ -86,35 +86,21 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
     current = sorted_f(current, True)
     return current
 
-def plot_msfem(current, merged, headerlist):
+def plot_msfem(current, filename_base):
     categories = ['all', 'coarse.solve', 'local.solve_for_all_cells', 'coarse.assemble']
     ycols = ['msfem.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
     labels = ['Overall', 'Coarse solve', 'Local assembly + solve', 'Coarse assembly'] + ['Ideal']
-    label_lookup = {v: p for v, p in zip(ycols, labels)}
-    xcol = 'ranks'
-    # plt.figure()
-    fig, ax = plt.subplots()
-    ax.set_xscale('log', basex=2)
-    # ax.set_yscale('log', basey=2)
-    colors = cm.brg
+    plot_common(current, filename_base, ycols, labels)
 
-    foo = current.plot(x=xcol, y=ycols, colormap=colors)
-    # plt.show()
-    # Remove grid lines (dotted lines inside plot)
-
-    # Pandas trick: remove weird dotted line on axis
-    ax.lines[0].set_visible(False)
-    lgd = plt.legend(ax.lines, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
-
-    plt.savefig(merged + '_speedup.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
-    pie_header = [f for f in headerlist if 'part' in f]
-    foo = current.plot(kind='pie', subplots=True, colormap=colors)
-
-def plot_fem(current):
+def plot_fem(current, filename_base):
     categories = ['apply', 'solve', 'constraints', 'assemble']
     ycols = ['fem.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
     labels = ['Overall', 'Solve', 'Constraints', 'Assembly'] + ['Ideal']
-    label_lookup = {v: p for v, p in zip(ycols, labels)}
+    plot_common(current, filename_base, ycols, labels)
+
+
+def plot_common(current, filename_base, ycols, labels, headerlist=None):
+    headerlist = headerlist or current.columns.values
     xcol = 'ranks'
     # plt.figure()
     fig, ax = plt.subplots()
@@ -130,6 +116,6 @@ def plot_fem(current):
     ax.lines[0].set_visible(False)
     lgd = plt.legend(ax.lines, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
-    plt.savefig(merged + '_speedup.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
-    #pie_header = [f for f in headerlist if 'part' in f]
-    #foo = current.plot(kind='pie', subplots=True, colormap=colors)
+    plt.savefig(filename_base + '_speedup.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+    pie_header = [f for f in headerlist if 'part' in f]
+    foo = current.plot(kind='pie', subplots=True, colormap=colors)
