@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib import cm
 import itertools
+import logging
 
 TIMINGS = ['usr', 'mix', 'sys', 'wall']
 MEASURES = ['max', 'avg']
@@ -33,7 +34,11 @@ def read_files(dirnames):
     for fn in dirnames:
         assert os.path.isdir(fn)
         prof = os.path.join(fn, 'profiler.csv')
-        new = pd.read_csv(prof)
+        try:
+            new = pd.read_csv(prof)
+        except pd.parser.CParserError as e:
+            logging.error('Failed parsing {}'.format(prof))
+            raise e
         headerlist = list(new.columns.values)
         params = SafeConfigParser()
         params.read(os.path.join(fn, 'dsc_parameter.log'))
