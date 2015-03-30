@@ -81,12 +81,31 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
             values = [round(ref_value / source[i], round_digits) for i in range(len(source))]
             current[speedup_col] = pd.Series(values)
 
+            # relative part of overall absolut timing category
             abspart_col = source_col + '_abspart'
             ref_value = lambda i: float(current['{}_{}_{}'.format(baseline_name, m, t)][i])
             values = [round(source[i] / ref_value(i), round_digits) for i in range(len(source))]
             current[abspart_col] = pd.Series(values)
+
+            # relative part of overall total walltime
+            wallpart_col = source_col + '_wallpart'
+            ref_value = lambda i: float(current['{}_{}_{}'.format(baseline_name, m, 'wall')][i])
+            values = [round(source[i] / ref_value(i), round_digits) for i in range(len(source))]
+            current[wallpart_col] = pd.Series(values)
+
+        for m in measures:
+            # thread efficiency
+            source_col = '{}_{}_{}'.format(sec, m, 'usr')
+            threadeff_col = source_col + '_threadeff'
+            wall = current['{}_{}_{}'.format(sec, m, 'wall')]
+            source = current[source_col]
+            value = lambda i: float(source[i] / (current['threads'][i] * wall[i]))
+            values = [round(value(i), round_digits) for i in range(len(source))]
+            current[threadeff_col] = pd.Series(values)
+
     ref_value = 1
-    cmp_value = lambda i: current['ranks'][i] / current['threads'][i]
+    # speedup
+    cmp_value = lambda i: current['ranks'][i] * current['threads'][i]
     values = [cmp_value(i) / cmp_value(0) for i in range(0, len(source))]
     current.insert(len(specials), 'ideal_speedup', pd.Series(values))
     current = sorted_f(current, True)
@@ -112,6 +131,8 @@ def plot_common(current, filename_base, ycols, labels, headerlist=None):
     colors = cm.brg
     foo = current.plot(x=xcol, y=ycols, colormap=colors)
     ax = fig.axes[0]
+    # ax.set_xscale('log', basex=2)
+    # ax.set_yscale('log', basey=2)
     lgd = plt.legend(ax.lines, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
     plt.savefig(filename_base + '_speedup.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
