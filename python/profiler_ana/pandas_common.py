@@ -114,18 +114,18 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
 def plot_msfem(current, filename_base):
     categories = ['all', 'coarse.solve', 'local.solve_for_all_cells', 'coarse.assemble']
     ycols = ['msfem.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
+    pie_cols = ['msfem.{}_avg_wall_abspart'.format(v) for v in categories[1:]]
     labels = ['Overall', 'Coarse solve', 'Local assembly + solve', 'Coarse assembly'] + ['Ideal']
-    plot_common(current, filename_base, ycols, labels)
+    plot_common(current, filename_base, ycols, labels, (pie_cols,['Coarse solve', 'Local assembly + solve', 'Coarse assembly']))
 
 def plot_fem(current, filename_base):
     categories = ['apply', 'solve', 'constraints', 'assemble']
     ycols = ['fem.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
     labels = ['Overall', 'Solve', 'Constraints', 'Assembly', 'Ideal']
-    plot_common(current, filename_base, ycols, labels)
+    plot_common(current, filename_base, ycols, labels, categories)
 
 
-def plot_common(current, filename_base, ycols, labels, headerlist=None):
-    headerlist = headerlist or current.columns.values
+def plot_common(current, filename_base, ycols, labels, pie=None):
     xcol = 'ranks'
     fig = plt.figure()
     colors = cm.brg
@@ -136,7 +136,12 @@ def plot_common(current, filename_base, ycols, labels, headerlist=None):
     lgd = plt.legend(ax.lines, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
     plt.savefig(filename_base + '_speedup.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
-    # plt.savefig(filename_base + '_speedup.png', bbox_inches='tight')
-    # pie_header = [f for f in headerlist if 'part' in f]
-    # foo = current.plot(kind='pie', subplots=True, colormap=colors
-    # )
+
+    if pie is None:
+        return
+    cols, labels = pie
+    fig = plt.figure()
+    print(current[cols].transpose())
+    foo = current[cols].transpose().plot(kind='pie', subplots=True,labels=None, colormap=colors)
+
+    plt.savefig(filename_base + '_pie.png')
