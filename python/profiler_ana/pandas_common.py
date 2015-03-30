@@ -13,6 +13,7 @@ TIMINGS = ['usr', 'mix', 'sys', 'wall']
 MEASURES = ['max', 'avg']
 SPECIALS = ['run', 'threads', 'ranks']
 
+pd.options.display.mpl_style = 'default'
 
 def make_val(val, round_digits=3):
     try:
@@ -86,7 +87,7 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
             current[abspart_col] = pd.Series(values)
     ref_value = 1
     cmp_value = lambda i: current['ranks'][i] / current['threads'][i]
-    values = [cmp_value(i) / cmp_value(0) for i in range(0, len(source))]  # + [np.NaN]
+    values = [cmp_value(i) / cmp_value(0) for i in range(0, len(source))]
     current.insert(len(specials), 'ideal_speedup', pd.Series(values))
     current = sorted_f(current, True)
     return current
@@ -100,27 +101,21 @@ def plot_msfem(current, filename_base):
 def plot_fem(current, filename_base):
     categories = ['apply', 'solve', 'constraints', 'assemble']
     ycols = ['fem.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
-    labels = ['Overall', 'Solve', 'Constraints', 'Assembly'] + ['Ideal']
+    labels = ['Overall', 'Solve', 'Constraints', 'Assembly', 'Ideal']
     plot_common(current, filename_base, ycols, labels)
 
 
 def plot_common(current, filename_base, ycols, labels, headerlist=None):
     headerlist = headerlist or current.columns.values
     xcol = 'ranks'
-    # plt.figure()
-    fig, ax = plt.subplots()
-    ax.set_xscale('log', basex=2)
-    # ax.set_yscale('log', basey=2)
+    fig = plt.figure()
     colors = cm.brg
-
     foo = current.plot(x=xcol, y=ycols, colormap=colors)
-    # plt.show()
-    # Remove grid lines (dotted lines inside plot)
-
-    # Pandas trick: remove weird dotted line on axis
-    ax.lines[0].set_visible(False)
+    ax = fig.axes[0]
     lgd = plt.legend(ax.lines, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
     plt.savefig(filename_base + '_speedup.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
-    pie_header = [f for f in headerlist if 'part' in f]
-    foo = current.plot(kind='pie', subplots=True, colormap=colors)
+    # plt.savefig(filename_base + '_speedup.png', bbox_inches='tight')
+    # pie_header = [f for f in headerlist if 'part' in f]
+    # foo = current.plot(kind='pie', subplots=True, colormap=colors
+    # )
