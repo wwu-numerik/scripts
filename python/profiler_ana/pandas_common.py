@@ -42,7 +42,7 @@ def read_files(dirnames):
             raise e
         headerlist = list(new.columns.values)
         params = SafeConfigParser()
-        params.read(os.path.join(fn, 'dsc_parameter.log'))
+        params.read(os.path.join(fn, 'dsc_parameter.log'), os.path.join(fn, 'logs', 'dsc_parameter.log'))
         p = {}
         for section in params.sections():
             p.update({'{}.{}'.format(section, n): make_val(v) for n, v in params.items(section)})
@@ -104,7 +104,7 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
             current[threadeff_col] = pd.Series(values)
 
     ref_value = 1
-    # speedup
+    # ideal speedup account for non-uniform thread/rank ratio across columns
     cmp_value = lambda i: current['ranks'][i] * current['threads'][i]
     values = [cmp_value(i) / cmp_value(0) for i in range(0, len(source))]
     current.insert(len(specials), 'ideal_speedup', pd.Series(values))

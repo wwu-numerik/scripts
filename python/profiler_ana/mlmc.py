@@ -22,6 +22,9 @@ baseline_name = 'mlmc.all'
 
 headerlist, current = pc.read_files(sys.argv[1:])
 current = pc.sorted_f(current, True)
+# full = pc.speedup(headerlist, current.copy(), baseline_name)
+# full.transpose().to_csv(merged)
+
 cols = [c for c in current.columns.values if c.startswith(baseline_name) and 'mix' not in c]
 cols = cols + ['{}_{}'.format(c,p) for c,p in itertools.product(cols, ['abspart', 'speedup'])]
 current = pc.speedup(headerlist, current, baseline_name)
@@ -29,4 +32,4 @@ current = current.loc[:, pc.SPECIALS + cols + ['ideal_speedup']]
 # pprint(t_sections)
 plot_mlmc(current, merged)
 
-current.transpose().to_csv(merged)
+current.transpose().to_csv('filtered_' + merged)
