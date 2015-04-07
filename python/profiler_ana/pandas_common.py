@@ -52,7 +52,7 @@ def read_files(dirnames):
         mem = os.path.join(fn, 'memory.csv')
         mem = pd.read_csv(mem)
         new = pd.concat((new, p, mem), axis=1)
-        err = os.path.join(fn, 'memory.csv')
+        err = os.path.join(fn, 'errors.csv')
         if os.path.isfile(err):
             err = pd.read_csv(err)
             new = pd.concat((new, p, err), axis=1)
