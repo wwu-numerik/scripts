@@ -83,13 +83,13 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
 
             # relative part of overall absolut timing category
             abspart_col = source_col + '_abspart'
-            ref_value = lambda i: float(current['{}_{}_{}'.format(baseline_name, m, t)][i])
+            ref_value = lambda j: float(current['{}_{}_{}'.format(baseline_name, m, t)][j])
             values = [round(source[i] / ref_value(i), round_digits) for i in range(len(source))]
             current[abspart_col] = pd.Series(values)
 
             # relative part of overall total walltime
             wallpart_col = source_col + '_wallpart'
-            ref_value = lambda i: float(current['{}_{}_{}'.format(baseline_name, m, 'wall')][i])
+            ref_value = lambda j: float(current['{}_{}_{}'.format(baseline_name, m, 'wall')][j])
             values = [round(source[i] / ref_value(i), round_digits) for i in range(len(source))]
             current[wallpart_col] = pd.Series(values)
 
@@ -99,13 +99,13 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
             threadeff_col = source_col + '_threadeff'
             wall = current['{}_{}_{}'.format(sec, m, 'wall')]
             source = current[source_col]
-            value = lambda i: float(source[i] / (current['threads'][i] * wall[i]))
+            value = lambda j: float(source[j] / (current['threads'][j] * wall[j]))
             values = [round(value(i), round_digits) for i in range(len(source))]
             current[threadeff_col] = pd.Series(values)
 
     ref_value = 1
     # ideal speedup account for non-uniform thread/rank ratio across columns
-    cmp_value = lambda i: current['ranks'][i] * current['threads'][i]
+    cmp_value = lambda j: current['ranks'][j] * current['threads'][j]
     values = [cmp_value(i) / cmp_value(0) for i in range(0, len(source))]
     current.insert(len(specials), 'ideal_speedup', pd.Series(values))
     current = sorted_f(current, True)
