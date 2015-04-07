@@ -9,7 +9,7 @@ import pandas_common as pc
 def plot_mlmc(current, filename_base):
     categories = ['all']
     ycols = ['mlmc.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
-    labels = ['Overall', 'Ideal']
+    labels = ['Actual', 'Ideal']
     pc.plot_common(current, merged, ycols, labels)
 
 

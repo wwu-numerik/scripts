@@ -130,6 +130,8 @@ def plot_common(current, filename_base, ycols, labels, bar=None):
     fig = plt.figure()
     colors = cm.brg
     foo = current.plot(x=xcol, y=ycols, colormap=colors)
+    plt.ylabel('Speedup')
+    plt.xlabel('# MPI Ranks')
     ax = fig.axes[0]
     # ax.set_xscale('log', basex=2)
     # ax.set_yscale('log', basey=2)
