@@ -12,12 +12,8 @@ def plot_mlmc(current, filename_base):
     labels = ['Actual', 'Ideal']
     pc.plot_common(current, merged, ycols, labels)
 
-
-# pd.options.display.mpl_style = 'default'
-first = sys.argv[1]
-mg = os.path.basename(first)
-merged = 'merged_{}.csv'.format(''.join(mg[:-4]))
-
+common_string = pc.common_substring(sys.argv[1:])
+merged = 'merged_{}.csv'.format(common_string)
 baseline_name = 'mlmc.all'
 
 headerlist, current = pc.read_files(sys.argv[1:])

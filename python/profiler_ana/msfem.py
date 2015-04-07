@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
-
-
 import sys
-import os
 
 import pandas_common as pc
 
-
-first = sys.argv[1]
-mg = os.path.basename(first)
-merged = 'merged_{}.csv'.format(''.join(mg[:-4]))
-
+common_string = pc.common_substring(sys.argv[1:])
+merged = 'merged_{}.csv'.format(common_string)
 baseline_name = 'msfem.all'
 
 headerlist, current = pc.read_files(sys.argv[1:])

@@ -8,12 +8,19 @@ from matplotlib.lines import Line2D
 from matplotlib import cm
 import itertools
 import logging
+import difflib
 
 TIMINGS = ['usr', 'mix', 'sys', 'wall']
 MEASURES = ['max', 'avg']
 SPECIALS = ['run', 'threads', 'ranks']
 
 pd.options.display.mpl_style = 'default'
+
+def common_substring(strings, glue='_'):
+    first, last = strings[0], strings[-1]
+    seq = difflib.SequenceMatcher(None, first, last, autojunk=False)
+    mb = seq.get_matching_blocks()
+    return glue.join([first[m.a:m.a + m.size] for m in mb])
 
 def make_val(val, round_digits=3):
     try:
