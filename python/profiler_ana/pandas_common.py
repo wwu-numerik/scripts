@@ -42,7 +42,8 @@ def read_files(dirnames):
             raise e
         headerlist = list(new.columns.values)
         params = SafeConfigParser()
-        params.read(os.path.join(fn, 'dsc_parameter.log'), os.path.join(fn, 'logs', 'dsc_parameter.log'))
+        param_fn = 'dsc_parameter.log'
+        params.read([os.path.join(fn, param_fn), os.path.join(fn, 'logs', param_fn)])
         p = {}
         for section in params.sections():
             p.update({'{}.{}'.format(section, n): make_val(v) for n, v in params.items(section)})
@@ -125,7 +126,7 @@ def plot_fem(current, filename_base):
     plot_common(current, filename_base, ycols, labels, categories)
 
 
-def plot_common(current, filename_base, ycols, labels, bar=None):
+def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None, logy_base=None):
     xcol = 'ranks'
     fig = plt.figure()
     colors = cm.brg
@@ -133,8 +134,10 @@ def plot_common(current, filename_base, ycols, labels, bar=None):
     plt.ylabel('Speedup')
     plt.xlabel('# MPI Ranks')
     ax = fig.axes[0]
-    # ax.set_xscale('log', basex=2)
-    # ax.set_yscale('log', basey=2)
+    if logx_base is not None:
+        ax.set_xscale('log', basex=logx_base)
+    if logy_base is not None:
+        ax.set_yscale('log', basey=logy_base)
     lgd = plt.legend(ax.lines, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
     plt.savefig(filename_base + '_speedup.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
