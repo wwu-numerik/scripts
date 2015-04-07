@@ -109,6 +109,8 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
     cmp_value = lambda j: current['ranks'][j] * current['threads'][j]
     values = [cmp_value(i) / cmp_value(0) for i in range(0, len(source))]
     current.insert(len(specials), 'ideal_speedup', pd.Series(values))
+    cores = [cmp_value(i) for i in range(0, len(source))]
+    current.insert(len(specials), 'cores', pd.Series(cores))
     current = sorted_f(current, True)
     return current
 
@@ -127,12 +129,12 @@ def plot_fem(current, filename_base):
 
 
 def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None, logy_base=None):
-    xcol = 'ranks'
+    xcol = 'cores'
     fig = plt.figure()
     colors = cm.brg
     foo = current.plot(x=xcol, y=ycols, colormap=colors)
     plt.ylabel('Speedup')
-    plt.xlabel('# MPI Ranks')
+    plt.xlabel('# Cores')
     ax = fig.axes[0]
     if logx_base is not None:
         ax.set_xscale('log', basex=logx_base)
