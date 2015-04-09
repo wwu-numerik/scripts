@@ -24,7 +24,10 @@ MARKERS = ['s', 'x', 'o', 'D', '+', '|', '*', 1, 2, 3, 4, 6, 7]
 
 pd.options.display.mpl_style = 'default'
 matplotlib.rc('font', family='sans-serif')
-matplotlib.rc('font', serif='Helvetica')
+# http://nerdjusttyped.blogspot.de/2010/07/type-1-fonts-and-matplotlib-figures.html
+matplotlib.rcParams['ps.useafm'] = True
+matplotlib.rcParams['pdf.use14corefonts'] = True
+matplotlib.rcParams['text.usetex'] = True
 
 def common_substring(strings, glue='_'):
     first, last = strings[0], strings[-1]
@@ -154,17 +157,16 @@ def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None,
     for i, line in enumerate(foo.lines):
         line.set_marker(MARKERS[i])
     plt.ylabel('Speedup')
-    plt.xlabel('# Cores')
+    plt.xlabel('\# Cores')
     ax = fig.axes[0]
     if logx_base is not None:
         ax.set_xscale('log', basex=logx_base)
     if logy_base is not None:
         ax.set_yscale('log', basey=logy_base)
-    lgd = plt.legend(ax.lines, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
+    lgd = plt.legend(ax.lines, labels, loc=2)#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
-    plt.savefig(filename_base + '_speedup.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
-    plt.savefig(filename_base + '_speedup.eps', bbox_extra_artists=(lgd,), bbox_inches='tight')
-    plt.savefig(filename_base + '_speedup.svg', bbox_extra_artists=(lgd,), bbox_inches='tight')
+    for fmt in ['png', 'eps', 'svg']:
+        plt.savefig(filename_base + '_speedup.{}'.format(fmt), bbox_extra_artists=(lgd,), bbox_inches='tight')
 
     if bar is None:
         return
