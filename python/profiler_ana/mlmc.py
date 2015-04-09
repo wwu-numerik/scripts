@@ -10,7 +10,7 @@ def plot_mlmc(current, filename_base):
     categories = ['all']
     ycols = ['mlmc.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
     labels = ['Actual', 'Ideal']
-    pc.plot_common(current, merged, ycols, labels)
+    pc.plot_common(current, filename_base, ycols, labels, logx_base=2, logy_base=2)
 
 common_string = pc.common_substring(sys.argv[1:])
 merged = 'merged_{}.csv'.format(common_string)

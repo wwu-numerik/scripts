@@ -4,23 +4,33 @@ import os
 import pandas as pd
 from configparser import SafeConfigParser
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-from matplotlib import cm
+import matplotlib
 import itertools
 import logging
 import difflib
+import colors as color_util
 
 TIMINGS = ['usr', 'mix', 'sys', 'wall']
 MEASURES = ['max', 'avg']
-SPECIALS = ['run', 'threads', 'ranks']
+SPECIALS = ['run', 'threads', 'ranks', 'cores']
+'''markers = {0: u'tickleft', 1: u'tickright', 2: u'tickup', 3: u'tickdown', 4: u'caretleft', u'D': u'diamond',
+           6: u'caretup', 7: u'caretdown', u's': u'square', u'|': u'vline', u'': u'nothing', u'None': u'nothing',
+           None: u'nothing', u'x': u'x', 5: u'caretright', u'_': u'hline', u'^': u'triangle_up', u' ': u'nothing',
+           u'd': u'thin_diamond', u'h': u'hexagon1', u'+': u'plus', u'*': u'star', u',': u'pixel', u'o': u'circle',
+           u'.': u'point', u'1': u'tri_down', u'p': u'pentagon', u'3': u'tri_left', u'2': u'tri_up', u'4': u'tri_right',
+           u'H': u'hexagon2', u'v': u'triangle_down', u'8': u'octagon', u'<': u'triangle_left', u'>': u'triangle_right'}
+'''
+MARKERS = ['s', 'x', 'o', 'D', '+', '|', '*', 1, 2, 3, 4, 6, 7]
 
 pd.options.display.mpl_style = 'default'
+matplotlib.rc('font', family='sans-serif')
+matplotlib.rc('font', serif='Helvetica')
 
 def common_substring(strings, glue='_'):
     first, last = strings[0], strings[-1]
     seq = difflib.SequenceMatcher(None, first, last, autojunk=False)
     mb = seq.get_matching_blocks()
-    return glue.join([first[m.a:m.a + m.size] for m in mb])
+    return glue.join([first[m.a:m.a + m.size] for m in mb]).replace(os.path.sep, '')
 
 def make_val(val, round_digits=3):
     try:
@@ -37,8 +47,9 @@ def m_strip(s, timings=None, measures=None):
     return s
 
 
-def read_files(dirnames):
+def read_files(dirnames, specials=None):
     current = None
+    specials = specials or SPECIALS
     for fn in dirnames:
         assert os.path.isdir(fn)
         prof = os.path.join(fn, 'profiler.csv')
@@ -65,6 +76,13 @@ def read_files(dirnames):
             new = pd.concat((new, p, err), axis=1)
 
         current = current.append(new, ignore_index=True) if current is not None else new
+    # ideal speedup account for non-uniform thread/rank ratio across columns
+    count = len(current['ranks'])
+    cmp_value = lambda j: current['ranks'][j] * current['threads'][j]
+    values = [cmp_value(i) / cmp_value(0) for i in range(0, count)]
+    current.insert(len(specials), 'ideal_speedup', pd.Series(values))
+    cores = [cmp_value(i) for i in range(0, count)]
+    current.insert(len(specials), 'cores', pd.Series(cores))
     return headerlist, current
 
 
@@ -111,13 +129,6 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
             values = [round(value(i), round_digits) for i in range(len(source))]
             current[threadeff_col] = pd.Series(values)
 
-    ref_value = 1
-    # ideal speedup account for non-uniform thread/rank ratio across columns
-    cmp_value = lambda j: current['ranks'][j] * current['threads'][j]
-    values = [cmp_value(i) / cmp_value(0) for i in range(0, len(source))]
-    current.insert(len(specials), 'ideal_speedup', pd.Series(values))
-    cores = [cmp_value(i) for i in range(0, len(source))]
-    current.insert(len(specials), 'cores', pd.Series(cores))
     current = sorted_f(current, True)
     return current
 
@@ -135,11 +146,13 @@ def plot_fem(current, filename_base):
     plot_common(current, filename_base, ycols, labels, categories)
 
 
-def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None, logy_base=None):
+def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None, logy_base=None, color_map=None):
     xcol = 'cores'
     fig = plt.figure()
-    colors = cm.brg
-    foo = current.plot(x=xcol, y=ycols, colormap=colors)
+    color_map = color_map or color_util.discrete_cmap(len(labels))
+    foo = current.plot(x=xcol, y=ycols, colormap=color_map)
+    for i, line in enumerate(foo.lines):
+        line.set_marker(MARKERS[i])
     plt.ylabel('Speedup')
     plt.xlabel('# Cores')
     ax = fig.axes[0]
@@ -150,12 +163,14 @@ def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None,
     lgd = plt.legend(ax.lines, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
     plt.savefig(filename_base + '_speedup.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.savefig(filename_base + '_speedup.eps', bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.savefig(filename_base + '_speedup.svg', bbox_extra_artists=(lgd,), bbox_inches='tight')
 
     if bar is None:
         return
     cols, labels = bar
     fig = plt.figure()
-    ax = current[cols].plot(kind='bar', stacked=True, colormap=colors)
+    ax = current[cols].plot(kind='bar', stacked=True, colormap=color_map)
     patches, _ = ax.get_legend_handles_labels()
 
     lgd = ax.legend(patches, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
