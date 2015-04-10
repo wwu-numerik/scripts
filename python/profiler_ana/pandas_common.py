@@ -186,10 +186,19 @@ def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None,
     plt.savefig(filename_base + '_pie.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
-def plot_error(data_frame, filename_base, error_cols, xcol, labels, logx_base=None, logy_base=None, color_map=None):
+def plot_error(data_frame, filename_base, error_cols, xcol, labels, baseline_name,
+               logx_base=None, logy_base=None, color_map=None):
     fig = plt.figure()
+
+    #normed walltime
+    normed = 'normed_walltime'
+    w_time = data_frame['{}_avg_wall'.format(baseline_name)]
+    count = len(w_time)
+    values = [w_time[i] / w_time.max() for i in range(0, count)]
+    data_frame.insert(0, normed, pd.Series(values))
+
     color_map = color_map or color_util.discrete_cmap(len(labels))
-    foo = data_frame.plot(x=xcol, y=error_cols, colormap=color_map)
+    foo = data_frame.plot(x=xcol, y=error_cols+[normed], colormap=color_map)
     for i, line in enumerate(foo.lines):
         line.set_marker(MARKERS[i])
     plt.ylabel('Error')
