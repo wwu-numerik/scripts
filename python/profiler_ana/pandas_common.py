@@ -21,6 +21,7 @@ SPECIALS = ['run', 'threads', 'ranks', 'cores']
            u'H': u'hexagon2', u'v': u'triangle_down', u'8': u'octagon', u'<': u'triangle_left', u'>': u'triangle_right'}
 '''
 MARKERS = ['s', 'x', 'o', 'D', '+', '|', '*', 1, 2, 3, 4, 6, 7]
+FIGURE_OUTPUTS = ['png', 'eps', 'svg']
 
 pd.options.display.mpl_style = 'default'
 matplotlib.rc('font', family='sans-serif')
@@ -53,6 +54,7 @@ def m_strip(s, timings=None, measures=None):
 def read_files(dirnames, specials=None):
     current = None
     specials = specials or SPECIALS
+    header = {'memory': [], 'profiler': [], 'params': [], 'errors': []}
     for fn in dirnames:
         assert os.path.isdir(fn)
         prof = os.path.join(fn, 'profiler.csv')
@@ -61,22 +63,26 @@ def read_files(dirnames, specials=None):
         except pd.parser.CParserError as e:
             logging.error('Failed parsing {}'.format(prof))
             raise e
-        headerlist = list(new.columns.values)
+        header['profiler'] = list(new.columns.values)
         params = SafeConfigParser()
         param_fn = 'dsc_parameter.log'
-        params.read([os.path.join(fn, param_fn), os.path.join(fn, 'logs', param_fn)])
+        params.read([os.path.join(fn, param_fn), os.path.join(fn, 'logs', param_fn),
+                     os.path.join(fn, 'logdata', param_fn)])
         p = {}
         for section in params.sections():
             p.update({'{}.{}'.format(section, n): make_val(v) for n, v in params.items(section)})
-        p = pd.DataFrame(p, index=[0])
+        param = pd.DataFrame(p, index=[0])
         # mem
         mem = os.path.join(fn, 'memory.csv')
         mem = pd.read_csv(mem)
-        new = pd.concat((new, p, mem), axis=1)
+        new = pd.concat((new, param, mem), axis=1)
+        header['memory'] = mem.columns.values
+        header['params'] = param.columns.values
         err = os.path.join(fn, 'errors.csv')
         if os.path.isfile(err):
             err = pd.read_csv(err)
-            new = pd.concat((new, p, err), axis=1)
+            header['errors'] = err.columns.values
+            new = pd.concat((new, err), axis=1)
 
         current = current.append(new, ignore_index=True) if current is not None else new
     # ideal speedup account for non-uniform thread/rank ratio across columns
@@ -86,7 +92,7 @@ def read_files(dirnames, specials=None):
     current.insert(len(specials), 'ideal_speedup', pd.Series(values))
     cores = [cmp_value(i) for i in range(0, count)]
     current.insert(len(specials), 'cores', pd.Series(cores))
-    return headerlist, current
+    return header, current
 
 
 def sorted_f(frame, ascending=True, sort_cols=None):
@@ -165,7 +171,7 @@ def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None,
         ax.set_yscale('log', basey=logy_base)
     lgd = plt.legend(ax.lines, labels, loc=2)#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
-    for fmt in ['png', 'eps', 'svg']:
+    for fmt in FIGURE_OUTPUTS:
         plt.savefig(filename_base + '_speedup.{}'.format(fmt), bbox_extra_artists=(lgd,), bbox_inches='tight')
 
     if bar is None:
@@ -178,3 +184,23 @@ def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None,
     lgd = ax.legend(patches, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
     plt.savefig(filename_base + '_pie.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+
+def plot_error(data_frame, filename_base, error_cols, xcol, labels, logx_base=None, logy_base=None, color_map=None):
+    fig = plt.figure()
+    color_map = color_map or color_util.discrete_cmap(len(labels))
+    foo = data_frame.plot(x=xcol, y=error_cols, colormap=color_map)
+    for i, line in enumerate(foo.lines):
+        line.set_marker(MARKERS[i])
+    plt.ylabel('Error')
+    plt.xlabel('Cells')
+    ax = fig.axes[0]
+    if logx_base is not None:
+        ax.set_xscale('log', basex=logx_base)
+    if logy_base is not None:
+        ax.set_yscale('log', basey=logy_base)
+    lgd = plt.legend(ax.lines, labels, loc=2)#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
+
+    common = common_substring(error_cols)
+    for fmt in FIGURE_OUTPUTS:
+        plt.savefig( '{}_{}.{}'.format(filename_base, common, fmt), bbox_extra_artists=(lgd,), bbox_inches='tight')

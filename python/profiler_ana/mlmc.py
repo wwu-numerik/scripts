@@ -18,7 +18,8 @@ common_string = pc.common_substring(sys.argv[1:])
 merged = 'merged_{}.csv'.format(common_string)
 baseline_name = 'mlmc.all'
 
-headerlist, current = pc.read_files(sys.argv[1:])
+header, current = pc.read_files(sys.argv[1:])
+headerlist = header['profiler']
 current = pc.sorted_f(current, True)
 # full = pc.speedup(headerlist, current.copy(), baseline_name)
 # full.transpose().to_csv(merged)
