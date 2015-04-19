@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import sys
 
 import pandas_common as pc
@@ -12,11 +13,13 @@ headerlist = header['profiler']
 current = pc.sorted_f(current, False)
 current = pc.speedup(headerlist, current, baseline_name)
 # pprint(t_sections)
-# pc.plot_msfem(current, merged)
-pc.plot_error(current, merged, ['msfem_exactH1s', 'msfem_exact_L2'],
+pc.plot_msfem(current, merged)
+try:
+    pc.plot_error(current, merged, ['msfem_exactH1s', 'msfem_exact_L2'],
               'grids.macro_cells_per_dim',['$H^1_s$', '$L^2$', 'walltime'], baseline_name,
               logy_base=10)
-
+except KeyError:
+    logging.error('No error data')
 current.transpose().to_csv(merged)
 # current.transpose().to_excel(merged+'.xls')
 # current.to_csv(merged)
