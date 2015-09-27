@@ -1,7 +1,7 @@
 #!/usr/bin/env pvbatch
 import os
 
-from paraview.simple import *
+from paraview.simple import servermanager, GetAnimationScene
 
 
 try:
@@ -27,7 +27,7 @@ except ImportError:
     try:
         state = sys.argv[1]
         outfile = sys.argv[2]
-    except IndexError, e:
+    except IndexError as e:
         print('python < 2.7 and too few input args')
         sys.exit(-1)
 
@@ -40,4 +40,4 @@ writer.SetFileName(outfile)
 writer.SetFrameRate(1)
 writer.SetAnimationScene(AnimationScene1.SMProxy)
 if not writer.Save():
-    raise exceptions.RuntimeError, "Saving of animation failed!"
+    raise RuntimeError("Saving of animation failed!")

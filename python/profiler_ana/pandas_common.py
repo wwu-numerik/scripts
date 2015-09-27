@@ -21,7 +21,7 @@ SPECIALS = ['run', 'threads', 'ranks', 'cores']
            u'H': u'hexagon2', u'v': u'triangle_down', u'8': u'octagon', u'<': u'triangle_left', u'>': u'triangle_right'}
 '''
 MARKERS = ['s', 'x', 'o', 'D', '+', '|', '*', 1, 2, 3, 4, 6, 7]
-FIGURE_OUTPUTS = ['png', 'eps', 'svg']
+FIGURE_OUTPUTS = ['png', 'svg']
 
 pd.options.display.mpl_style = 'default'
 matplotlib.rc('font', family='sans-serif')
@@ -164,7 +164,7 @@ def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None,
         line.set_marker(MARKERS[i])
     plt.ylabel('Speedup')
     plt.xlabel('\# Cores')
-    ax = fig.axes[0]
+    ax = foo.axes
     if logx_base is not None:
         ax.set_xscale('log', basex=logx_base)
     if logy_base is not None:
@@ -213,3 +213,4 @@ def plot_error(data_frame, filename_base, error_cols, xcol, labels, baseline_nam
     common = common_substring(error_cols)
     for fmt in FIGURE_OUTPUTS:
         plt.savefig( '{}_{}.{}'.format(filename_base, common, fmt), bbox_extra_artists=(lgd,), bbox_inches='tight')
+
