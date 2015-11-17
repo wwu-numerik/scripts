@@ -2,7 +2,10 @@ __author__ = 'r_milk01'
 
 import os
 import pandas as pd
-from configparser import SafeConfigParser
+try:
+    from configparser import SafeConfigParser
+except ImportError:
+    from ConfigParser import SafeConfigParser
 import matplotlib.pyplot as plt
 import matplotlib
 import itertools
@@ -159,12 +162,12 @@ def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None,
     xcol = 'cores'
     fig = plt.figure()
     color_map = color_map or color_util.discrete_cmap(len(labels))
-    foo = current.plot(x=xcol, y=ycols, colormap=color_map)
-    for i, line in enumerate(foo.lines):
+    subplot = current.plot(x=xcol, y=ycols, colormap=color_map)
+    for i, line in enumerate(subplot.lines):
         line.set_marker(MARKERS[i])
     plt.ylabel('Speedup')
     plt.xlabel('\# Cores')
-    ax = fig.axes[0]
+    ax = subplot.figure.axes[0]
     if logx_base is not None:
         ax.set_xscale('log', basex=logx_base)
     if logy_base is not None:
