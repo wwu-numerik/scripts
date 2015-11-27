@@ -7,7 +7,7 @@ Usage:
 
 Options:
   -h --help     Show this screen.
-
+  -d --delete   print delete command.
 """
 from docopt import docopt
 import os
@@ -29,3 +29,5 @@ if __name__ == '__main__':
     directory = arguments['DIRECTORY'] or os.getcwd()
     pattern = arguments['PATTERN'] or '*'
     print(' '.join(get_zero_files(directory, pattern)))
+    if arguments.get('--delete'):
+        print('\nrm -rf '.join(get_zero_files(directory, pattern)))
