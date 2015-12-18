@@ -18,9 +18,9 @@ def clang_format_status(dirname):
         statuses_url = r.json()['statuses_url']
 
     r = requests.post(statuses_url,
-                  auth=auth, state="pending",
-                  description="Checking if clang-format has been applied to all source files",
-                  context='ci/clang-format')
+                  auth=auth, data={"state" : "pending",
+                  "description" : "Checking if clang-format has been applied to all source files",
+                  "context" : "ci/clang-format"})
     try:
         fails = fc.check_dir(dirname, staged_only=False)
     except Exception as _:
@@ -29,6 +29,6 @@ def clang_format_status(dirname):
         state = 'failure' if len(fails) > 0 else 'success'
 
     r = requests.post(statuses_url,
-                      auth=auth, state=state,
-                      description="Checked if clang-format has been applied to all source files",
-                      context='ci/clang-format')
+                      auth=auth, data={"state" : state,
+                      "description" : "Checked if clang-format has been applied to all source files",
+                      "context" : "ci/clang-format"})
