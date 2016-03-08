@@ -73,18 +73,33 @@ def getColourPalette(size):
     return result
 
 
-def getColourPaletteCheat(size, filter_colors=None):
+def contrast_ratio(color_a, color_b):
+    def _lum(c):
+        index = float(c) * 255
+        if index < 0.03928:
+            return index / 12.92
+        else:
+            return ( ( index + 0.055 ) / 1.055 ) ** 2.4
+    def _rel(rgb):
+        return 0.2126 * _lum(rgb[0]) + 0.7152 * _lum(rgb[1]) + 0.0722 * _lum(rgb[2]) 
+    return ( _rel(color_a) + 0.05 ) / ( _rel(color_b) + 0.05 )
+
+
+def getColourPaletteCheat(size, filter_colors=None, bg_color=(1, 1, 1)):
     filter_colors = filter_colors or []
     k = []
     org_size = size
     while len(k) < org_size:
         size += 1
         k = [p for p in set(getColourPalette(size)) if p not in filter_colors]
+        k = [p for p in set(getColourPalette(size)) if p not in filter_colors and contrast_ratio(p, bg_color) < 0.6]
+    for p in k:
+        print('{} ratio: {}'.format(p, contrast_ratio(p, bg_color)))
     return k
 
 
-def discrete_cmap(count):
-    cmap = mpl.colors.ListedColormap(getColourPaletteCheat(count), 'indexed')
+def discrete_cmap(count, bg_color=(255, 255, 255)):
+    cmap = mpl.colors.ListedColormap(getColourPaletteCheat(count, bg_color=bg_color), 'indexed')
     mpl.cm.register_cmap(cmap=cmap)
     return cmap
 

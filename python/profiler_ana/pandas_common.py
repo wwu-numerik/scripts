@@ -23,7 +23,7 @@ SPECIALS = ['run', 'threads', 'ranks', 'cores']
            u'.': u'point', u'1': u'tri_down', u'p': u'pentagon', u'3': u'tri_left', u'2': u'tri_up', u'4': u'tri_right',
            u'H': u'hexagon2', u'v': u'triangle_down', u'8': u'octagon', u'<': u'triangle_left', u'>': u'triangle_right'}
 '''
-MARKERS = ['s', 'x', 'o', 'D', '+', '|', '*', 1, 2, 3, 4, 6, 7]
+MARKERS = ['s', 'o', 4, 5, 7, '|', '*', 1, 2, 3, 4, 6, 7]
 FIGURE_OUTPUTS = ['png', 'eps', 'svg']
 
 pd.options.display.mpl_style = 'default'
@@ -149,7 +149,8 @@ def plot_msfem(current, filename_base):
     ycols = ['msfem.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
     bar_cols = ['msfem.{}_avg_wall_abspart'.format(v) for v in categories[1:]]
     labels = ['Overall', 'Coarse solve', 'Local assembly + solve', 'Coarse assembly'] + ['Ideal']
-    plot_common(current, filename_base, ycols, labels, (bar_cols,['Coarse solve', 'Local assembly + solve', 'Coarse assembly']))
+    plot_common(current, filename_base, ycols, labels,
+                (bar_cols,['Coarse solve', 'Local assembly + solve', 'Coarse assembly']), logx_base=2, logy_base=2)
 
 def plot_fem(current, filename_base):
     categories = ['apply', 'solve', 'constraints', 'assemble']
@@ -158,10 +159,10 @@ def plot_fem(current, filename_base):
     plot_common(current, filename_base, ycols, labels, categories)
 
 
-def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None, logy_base=None, color_map=None):
+def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None, logy_base=None, color_map=None, bg_color=(1, 1, 1)):
     xcol = 'cores'
     fig = plt.figure()
-    color_map = color_map or color_util.discrete_cmap(len(labels))
+    color_map = color_map or color_util.discrete_cmap(len(labels), bg_color=bg_color)
     subplot = current.plot(x=xcol, y=ycols, colormap=color_map)
     for i, line in enumerate(subplot.lines):
         line.set_marker(MARKERS[i])
@@ -173,6 +174,8 @@ def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None,
     if logy_base is not None:
         ax.set_yscale('log', basey=logy_base)
     lgd = plt.legend(ax.lines, labels, loc=2)#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
+    ax.set_axis_bgcolor(bg_color)
+    lgd.get_frame().set_facecolor(bg_color)
 
     for fmt in FIGURE_OUTPUTS:
         plt.savefig(filename_base + '_speedup.{}'.format(fmt), bbox_extra_artists=(lgd,), bbox_inches='tight')
