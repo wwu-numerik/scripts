@@ -30,4 +30,4 @@ git add --all .
 git config user.name "Travis-CI"
 git config user.email "travis@travis-ci.org"
 git commit -m "Testlogs for Job ${TRAVIS_JOB_NUMBER} - ${TRAVIS_COMMIT_RANGE}"
-git push -u ${TESTLOGS_URL} ${BRANCH}
+git push -q --set-upstream origin ${BRANCH}
