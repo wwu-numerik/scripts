@@ -6,6 +6,7 @@ UBUNTU=4.8
 OUR=4.9
 
 ${SUDO} apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+${SUDO} apt-get update
 ${SUDO} apt-get install gcc-${OUR} g++-${OUR} gcc-${OUR}-base libgcc-${OUR}-dev libstdc++-${OUR}-dev 
 ${SUDO} update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${UBUNTU} 100
 ${SUDO} update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${OUR} 50
