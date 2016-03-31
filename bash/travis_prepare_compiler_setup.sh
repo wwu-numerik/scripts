@@ -3,7 +3,7 @@
 SUDO='sudo -E'
 # installs gcc ${OUR} and makes it system default
 UBUNTU=4.8
-OUR=4.9
+OUR=${1:-4.9}
 
 ${SUDO} apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
 ${SUDO} apt-get update
@@ -17,3 +17,8 @@ ${SUDO} update-alternatives --install /usr/bin/cpp cpp-bin /usr/bin/cpp-${OUR} 5
 ${SUDO} update-alternatives --set g++ /usr/bin/g++-${OUR}
 ${SUDO} update-alternatives --set gcc /usr/bin/gcc-${OUR}
 ${SUDO} update-alternatives --set cpp-bin /usr/bin/cpp-${OUR}
+
+set -x
+g++ --version
+gcc --version
+cpp --version
