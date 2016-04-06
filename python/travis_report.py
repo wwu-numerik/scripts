@@ -11,19 +11,14 @@ def clang_format_status(dirname):
     auth = ('ftalbrecht', token)
     pr = os.environ['TRAVIS_PULL_REQUEST']
     slug = os.environ['TRAVIS_REPO_SLUG']
-    print("pr: ", pr)
-    print("slug: ", slug)
     if pr == 'false':
         statuses_url = 'https://api.github.com/repos/{}/statuses/{}'.format(slug, os.environ['TRAVIS_COMMIT'])
     else:
         r = requests.get('https://api.github.com/repos/{}/pulls/{}'.format(slug, pr), auth=auth)
-        print("Response:", r)
-        print(r.json())
         statuses_url = r.json()['statuses_url']
 
-    print('Status url {}'.format(statuses_url))
     r = requests.post(statuses_url,
-                  auth=auth, data={"state" : "pending",
+                  auth=auth, json={"state" : "pending",
                   "description" : "Checking if clang-format has been applied to all source files",
                   "context" : "ci/clang-format"})
     print("POST Response 1:", r)
@@ -36,7 +31,7 @@ def clang_format_status(dirname):
         state = 'failure' if len(fails) > 0 else 'success'
 
     r = requests.post(statuses_url,
-                      auth=auth, data={"state" : state,
+                      auth=auth, json={"state" : state,
                       "description" : "Checked if clang-format has been applied to all source files",
                       "context" : "ci/clang-format"})
 
