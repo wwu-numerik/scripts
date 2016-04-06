@@ -16,7 +16,7 @@ def clang_format_status(dirname):
     if pr == 'false':
         statuses_url = 'https://api.github.com/repos/{}/statuses/{}'.format(slug, os.environ['TRAVIS_COMMIT'])
     else:
-        r = requests.get('https://api.github.com/repos/{}/{}'.format(slug, pr), auth=auth)
+        r = requests.get('https://api.github.com/repos/{}/pulls/{}'.format(slug, pr), auth=auth)
         print("Response:", r)
         print(r.json())
         statuses_url = r.json()['statuses_url']
