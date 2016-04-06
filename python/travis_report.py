@@ -8,7 +8,7 @@ import format_check as fc
 def clang_format_status(dirname):
     import requests
     token = os.environ['STATUS_TOKEN']
-    auth = ('renemilk', token)
+    auth = ('ftalbrecht', token)
     pr = os.environ['TRAVIS_PULL_REQUEST']
     slug = os.environ['TRAVIS_REPO_SLUG']
     print("pr: ", pr)
@@ -21,6 +21,7 @@ def clang_format_status(dirname):
         print(r.json())
         statuses_url = r.json()['statuses_url']
 
+    print('Status url {}'.format(statuses_url))
     r = requests.post(statuses_url,
                   auth=auth, data={"state" : "pending",
                   "description" : "Checking if clang-format has been applied to all source files",
