@@ -21,10 +21,8 @@ def clang_format_status(dirname):
                   auth=auth, json={"state" : "pending",
                   "description" : "Checking if clang-format has been applied to all source files",
                   "context" : "ci/clang-format"})
-    print("POST Response 1:", r)
-    print(r.json())
     try:
-        fails = fc.check_dir(dirname, staged_only=False)
+        fails = fc.check_dir(dirname, mode='all')
     except Exception as _:
         state = 'error'
     else:
@@ -35,5 +33,3 @@ def clang_format_status(dirname):
                       "description" : "Checked if clang-format has been applied to all source files",
                       "context" : "ci/clang-format"})
 
-    print("POST Response 2:", r)
-    print(r.json())
