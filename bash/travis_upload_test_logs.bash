@@ -9,7 +9,7 @@ fi
 cd
 rm -rf logs
 # TRAVIS_REPO_SLUG example: dune-community/dune-xt-common
-if [ "x${GH_TOKEN}" == "x" ] ; then
+if [ "x${GH_TOKEN}" != "x" ] ; then
   TESTLOGS_URL=https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}-testlogs.git
 else
   TESTLOGS_URL=git@github.com:${TRAVIS_REPO_SLUG}-testlogs.git
