@@ -23,7 +23,7 @@ def clang_format_status(dirname):
                   'context' : 'ci/clang-format'})
     try:
         fails = fc.check_dir(dirname, mode='all')
-    except Exception as 4:
+    except Exception as e:
         state = 'error'
         fails = [str(e)]
     else:
