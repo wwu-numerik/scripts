@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import traceback
 
 import format_check as fc
 
@@ -26,6 +27,7 @@ def clang_format_status(dirname):
     except Exception as e:
         state = 'error'
         fails = [str(e)]
+        traceback.print_exc()
     else:
         state = 'failure' if len(fails) > 0 else 'success'
 
