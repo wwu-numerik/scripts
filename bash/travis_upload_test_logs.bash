@@ -9,7 +9,11 @@ fi
 cd
 rm -rf logs
 # TRAVIS_REPO_SLUG example: dune-community/dune-xt-common
-TESTLOGS_URL=https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}-testlogs.git
+if [ "x${GH_TOKEN}" == "x" ] ; then
+  TESTLOGS_URL=https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}-testlogs.git
+else
+  TESTLOGS_URL=git@github.com:${TRAVIS_REPO_SLUG}-testlogs.git
+fi
 git clone ${TESTLOGS_URL} logs
 cd logs
 # check if branch exists, see http://stackoverflow.com/questions/8223906/how-to-check-if-remote-branch-exists-on-a-given-remote-repository
