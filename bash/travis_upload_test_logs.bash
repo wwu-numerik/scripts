@@ -31,7 +31,7 @@ mkdir ${DIR}
 rsync -a ${RESULT_DIR}/*.xml ${DIR}
 printenv | grep -v TOKEN | sort > ${DIR}/env
 git add --all .
-git config user.name "Travis-CI"
-git config user.email "travis@travis-ci.org"
+git config user.name "DUNE Community Bot"
+git config user.email "dune-community.bot@wwu.de"
 git commit -m "Testlogs for Job ${TRAVIS_JOB_NUMBER} - ${TRAVIS_COMMIT_RANGE}"
 git push -q --set-upstream origin ${BRANCH}
