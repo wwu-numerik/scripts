@@ -2,14 +2,36 @@
 
 import os
 import traceback
+import subprocess
 
 import format_check as fc
+
+def get_patch_for_dir(basedir):
+    """
+    :param basedir: absolute path to git root
+    :param mode: anyof 'staged', 'modified' or 'all' to select which files to check. Note
+                    staged files do not count as modified
+    :return: diff string
+    """
+    os.chdir(basedir)
+    # alternative clang-format binary given?
+    try:
+        clangformat = subprocess.check_output(['git', 'config', 'hooks.clangformat'],
+                                              universal_newlines=True).strip()
+    except subprocess.CalledProcessError as _:
+        clangformat = 'clang-format'
+
+    out = subprocess.check_output(['git', 'ls-files'],
+                                  universal_newlines=True)
+    for filename in sorted(out.splitlines()):
+        subprocess.check_output([clangformat, '-i', '-style=file', filename], universal_newlines=True)
+    return subprocess.check_call(['git', 'diff'])
 
 
 def clang_format_status(dirname):
     import requests
     token = os.environ['STATUS_TOKEN']
-    auth = ('ftalbrecht', token)
+    auth = ('dune-community-bot', token)
     pr = os.environ['TRAVIS_PULL_REQUEST']
     slug = os.environ['TRAVIS_REPO_SLUG']
     if pr == 'false':
@@ -22,17 +44,30 @@ def clang_format_status(dirname):
                   auth=auth, json={'state' : 'pending',
                   'description' : 'Checking if clang-format has been applied to all source files',
                   'context' : 'ci/clang-format'})
+    target_url = None
     try:
         fails = fc.check_dir(dirname, mode='all')
     except Exception as e:
         state = 'error'
         fails = [str(e)]
         traceback.print_exc()
+        msg = 'the check itself errored out'
     else:
         state = 'failure' if len(fails) > 0 else 'success'
+        msg = 'All good'
+        if len(fails) > 0 and pr != 'false':
+            patchname = 'diff.txt'
+            r = requests.post('https://api.github.com/gist',
+                  auth=auth, json={'public' : 'true',
+                  'description' : 'clang-format git diff for {} PR {}'.format(slug, os.environ['TRAVIS_PULL_REQUEST']),
+                  'files': { patchname: get_patch_for_dir(dirname)}})
+            target_url = r.json()['files'][patchname]['raw_url']
+            msg = 'Found unformatted files'
 
     r = requests.post(statuses_url,
                       auth=auth, json={'state' : state,
-                      'description' : 'unformatted files: {}'.format(' '.join(fails)),
-                      'context' : 'ci/clang-format'})
+                                       'description' : msg,
+                                        'context' : 'ci/clang-format',
+                                       'target_url': target_url}
+                      )
 
