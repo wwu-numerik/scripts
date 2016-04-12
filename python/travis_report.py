@@ -55,11 +55,15 @@ def clang_format_status(dirname):
     else:
         state = 'failure' if len(fails) > 0 else 'success'
         msg = 'All good'
-        if len(fails) > 0 and pr != 'false':
+        if len(fails) > 0:
             patchname = 'diff.txt'
+            if pr != 'false':
+                desc = 'clang-format git diff for {} PR {}'.format(slug, pr)
+            else:
+                desc = 'clang-format git diff for {} Commit {}'.format(slug, os.environ['TRAVIS_COMMIT'])
             r = requests.post('https://api.github.com/gist',
                   auth=auth, json={'public' : 'true',
-                  'description' : 'clang-format git diff for {} PR {}'.format(slug, os.environ['TRAVIS_PULL_REQUEST']),
+                  'description' : desc,
                   'files': { patchname: get_patch_for_dir(dirname)}})
             target_url = r.json()['files'][patchname]['raw_url']
             msg = 'Found unformatted files'
