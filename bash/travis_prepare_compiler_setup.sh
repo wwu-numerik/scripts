@@ -18,7 +18,3 @@ ${SUDO} update-alternatives --set g++ /usr/bin/g++-${OUR}
 ${SUDO} update-alternatives --set gcc /usr/bin/gcc-${OUR}
 ${SUDO} update-alternatives --set cpp-bin /usr/bin/cpp-${OUR}
 
-set -x
-g++ --version
-gcc --version
-cpp --version
