@@ -26,7 +26,7 @@ def get_patch_for_dir(basedir):
            if os.path.splitext(f)[-1] in fc.CPP_EXTENSIONS]
     for filename in files:
         subprocess.check_output([clangformat, '-i', '-style=file', filename], universal_newlines=True)
-    return subprocess.check_output(['git', 'diff'])
+    return subprocess.check_output(['git', 'diff'], universal_newlines=True)
 
 
 def clang_format_status(dirname):
