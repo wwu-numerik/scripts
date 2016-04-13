@@ -6,6 +6,29 @@ import subprocess
 
 import format_check as fc
 
+README = '''
+The code you have published does not conform to the project's coding style
+ (see also https://github.com/{slug}/blob/master/CONTRIBUTING.md).
+We have automatically applied clang-fromat for your published code, for your convenience.
+Please consider applying clang-format locally before commiting the next time (for instance by installing a pre-commit
+hook found in https://github.com/wwu-numerik/git-hooks).
+
+In order to incorporate these changes, open up a terminal and
+* go to the location which contains the code you are trying to publish,
+* download the prepared patch, for instance by executing
+    wget THIS_FILES_URL
+* make sure the patch can be applied
+    git apply --check diff.txt
+* apply the patch
+    git apply diff.txt
+
+You can now commit these changes in the usual way or amend your previous commits to immediately include the correct code formatting.
+
+If you have any questions, please add a comment in the pull request.
+
+
+'''
+
 def get_patch_for_dir(basedir):
     """
     :param basedir: absolute path to git root
@@ -65,7 +88,7 @@ def clang_format_status(dirname):
             r = requests.post('https://api.github.com/gists',
                   auth=auth, json={'public' : 'true',
                   'description' : desc,
-                  'files': {patchname: {'content': get_patch_for_dir(dirname)}}})
+                  'files': {patchname: {'content': README.format(slug=slug) + get_patch_for_dir(dirname)}}})
             print(r)
             print(r.json())
             target_url = r.json()['files'][patchname]['raw_url']
