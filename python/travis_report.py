@@ -62,7 +62,7 @@ def clang_format_status(dirname):
                 desc = 'clang-format git diff for {} PR {}'.format(slug, pr)
             else:
                 desc = 'clang-format git diff for {} Commit {}'.format(slug, os.environ['TRAVIS_COMMIT'])
-            r = requests.post('https://api.github.com/gist',
+            r = requests.post('https://api.github.com/gists',
                   auth=auth, json={'public' : 'true',
                   'description' : desc,
                   'files': { patchname: get_patch_for_dir(dirname)}})
