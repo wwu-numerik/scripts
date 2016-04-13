@@ -66,6 +66,8 @@ def clang_format_status(dirname):
                   auth=auth, json={'public' : 'true',
                   'description' : desc,
                   'files': { patchname: get_patch_for_dir(dirname)}})
+            print(r)
+            print(r.json())
             target_url = r.json()['files'][patchname]['raw_url']
             msg = 'Found unformatted files'
 
