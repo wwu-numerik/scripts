@@ -21,12 +21,12 @@ def get_patch_for_dir(basedir):
     except subprocess.CalledProcessError as _:
         clangformat = 'clang-format'
 
-    out = [f for f in subprocess.check_output(['git', 'ls-files'],
+    files = [f for f in subprocess.check_output(['git', 'ls-files'],
                                   universal_newlines=True).splitlines()
            if os.path.splitext(f)[-1] in fc.CPP_EXTENSIONS]
-    for filename in sorted(out.splitlines()):
+    for filename in files:
         subprocess.check_output([clangformat, '-i', '-style=file', filename], universal_newlines=True)
-    return subprocess.check_call(['git', 'diff'])
+    return subprocess.check_output(['git', 'diff'])
 
 
 def clang_format_status(dirname):
