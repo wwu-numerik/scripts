@@ -65,7 +65,7 @@ def clang_format_status(dirname):
             r = requests.post('https://api.github.com/gists',
                   auth=auth, json={'public' : 'true',
                   'description' : desc,
-                  'files': { patchname: get_patch_for_dir(dirname)}})
+                  'files': { patchname: 'dummy diff string'}})
             print(r)
             print(r.json())
             target_url = r.json()['files'][patchname]['raw_url']
