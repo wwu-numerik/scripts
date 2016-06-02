@@ -1,9 +1,11 @@
+import math
+
 __author__ = 'r_milk01'
 
 import os
 import pandas as pd
 try:
-    from configparser import SafeConfigParser
+    from configparser import ConfigParser
 except ImportError:
     from ConfigParser import SafeConfigParser
 import matplotlib.pyplot as plt
@@ -13,7 +15,7 @@ import logging
 import difflib
 import colors as color_util
 
-TIMINGS = ['usr', 'mix', 'sys', 'wall']
+TIMINGS = ['usr', 'sys', 'wall']
 MEASURES = ['max', 'avg']
 SPECIALS = ['run', 'threads', 'ranks', 'cores']
 '''markers = {0: u'tickleft', 1: u'tickright', 2: u'tickup', 3: u'tickdown', 4: u'caretleft', u'D': u'diamond',
@@ -26,7 +28,7 @@ SPECIALS = ['run', 'threads', 'ranks', 'cores']
 MARKERS = ['s', 'o', 4, 5, 7, '|', '*', 1, 2, 3, 4, 6, 7]
 FIGURE_OUTPUTS = ['png', 'eps', 'svg']
 
-pd.options.display.mpl_style = 'default'
+# pd.options.display.mpl_style = 'default'
 matplotlib.rc('font', family='sans-serif')
 # http://nerdjusttyped.blogspot.de/2010/07/type-1-fonts-and-matplotlib-figures.html
 matplotlib.rcParams['ps.useafm'] = True
@@ -67,13 +69,15 @@ def read_files(dirnames, specials=None):
             logging.error('Failed parsing {}'.format(prof))
             raise e
         header['profiler'] = list(new.columns.values)
-        params = SafeConfigParser()
-        param_fn = 'dsc_parameter.log'
-        params.read([os.path.join(fn, param_fn), os.path.join(fn, 'logs', param_fn),
-                     os.path.join(fn, 'logdata', param_fn)])
+        params = ConfigParser()
+        param_fn = ['dsc_parameter.log', 'dxtc_parameter.log']
+        subdirs = ['', 'logs', 'logdata']
+        params.read([os.path.join(fn, sd, pfn) for sd, pfn in itertools.product(subdirs, param_fn)])
         p = {}
         for section in params.sections():
             p.update({'{}.{}'.format(section, n): make_val(v) for n, v in params.items(section)})
+        p['grids.total_macro_cells'] = math.pow(p['grids.macro_cells_per_dim'],p['grids.dim'])
+        p['grids.total_fine_cells'] = p['grids.total_macro_cells'] * math.pow(p['grids.micro_cells_per_macrocell_dim'],p['grids.dim'])
         param = pd.DataFrame(p, index=[0])
         # mem
         mem = os.path.join(fn, 'memory.csv')
@@ -90,11 +94,15 @@ def read_files(dirnames, specials=None):
         current = current.append(new, ignore_index=True) if current is not None else new
     # ideal speedup account for non-uniform thread/rank ratio across columns
     count = len(current['ranks'])
+    cmp_value = lambda j: current['grids.total_macro_cells'][j] / (current['ranks'][j] * current['threads'][j])
+    values = [cmp_value(i) / cmp_value(0) for i in range(0, count)]
+    current.insert(len(specials), 'ideal_scaleup', pd.Series(values))
     cmp_value = lambda j: current['ranks'][j] * current['threads'][j]
     values = [cmp_value(i) / cmp_value(0) for i in range(0, count)]
     current.insert(len(specials), 'ideal_speedup', pd.Series(values))
     cores = [cmp_value(i) for i in range(0, count)]
     current.insert(len(specials), 'cores', pd.Series(cores))
+
     return header, current
 
 
@@ -144,30 +152,79 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
     current = sorted_f(current, True)
     return current
 
-def plot_msfem(current, filename_base):
+
+def scaleup(headerlist, current, baseline_name, specials=None, round_digits=3, timings=None, measures=None):
+    timings = timings or TIMINGS
+    measures = measures or MEASURES
+    specials = specials or SPECIALS
+    t_sections = set([m_strip(h) for h in headerlist]) - set(specials)
+
+    for sec in t_sections:
+        for t, m in itertools.product(timings, measures):
+            source_col = '{}_{}_{}'.format(sec, m, t)
+            source = current[source_col]
+
+            speedup_col = '{}_{}'.format(source_col, 'scaleup')
+            ref_value = source[0]
+            values = [round(ref_value / source[i], round_digits) for i in range(len(source))]
+            current[speedup_col] = pd.Series(values)
+
+            # relative part of overall absolut timing category
+            abspart_col = source_col + '_abspart'
+            ref_value = lambda j: float(current['{}_{}_{}'.format(baseline_name, m, t)][j])
+            values = [round(source[i] / ref_value(i), round_digits) for i in range(len(source))]
+            current[abspart_col] = pd.Series(values)
+
+            # relative part of overall total walltime
+            wallpart_col = source_col + '_wallpart'
+            ref_value = lambda j: float(current['{}_{}_{}'.format(baseline_name, m, 'wall')][j])
+            values = [round(source[i] / ref_value(i), round_digits) for i in range(len(source))]
+            current[wallpart_col] = pd.Series(values)
+
+        for m in measures:
+            # thread efficiency
+            source_col = '{}_{}_{}'.format(sec, m, 'usr')
+            threadeff_col = source_col + '_threadeff'
+            wall = current['{}_{}_{}'.format(sec, m, 'wall')]
+            source = current[source_col]
+            value = lambda j: float(source[j] / (current['threads'][j] * wall[j]))
+            values = [round(value(i), round_digits) for i in range(len(source))]
+            current[threadeff_col] = pd.Series(values)
+
+    current = sorted_f(current, True)
+    return current
+
+
+def plot_msfem(current, filename_base, series_name=None, xcol=None):
+    xcol = xcol or 'cores'
+    series_name = series_name or 'speedup'
     categories = ['all', 'coarse.solve', 'local.solve_for_all_cells', 'coarse.assemble']
-    ycols = ['msfem.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
+    ycols = ['msfem.{}_avg_wall_{}'.format(v, series_name) for v in categories] + ['ideal_{}'.format(series_name)]
     bar_cols = ['msfem.{}_avg_wall_abspart'.format(v) for v in categories[1:]]
     labels = ['Overall', 'Coarse solve', 'Local assembly + solve', 'Coarse assembly'] + ['Ideal']
     plot_common(current, filename_base, ycols, labels,
-                (bar_cols,['Coarse solve', 'Local assembly + solve', 'Coarse assembly']), logx_base=2, logy_base=2)
+                bar=(bar_cols,['Coarse solve', 'Local assembly + solve', 'Coarse assembly']), xcol=xcol,
+                series_name=series_name, logx_base=2, logy_base=2)
 
-def plot_fem(current, filename_base):
+def plot_fem(current, filename_base, series_name=None, xcol=None):
+    xcol = xcol or 'cores'
+    series_name = series_name or 'speedup'
     categories = ['apply', 'solve', 'constraints', 'assemble']
     ycols = ['fem.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
     labels = ['Overall', 'Solve', 'Constraints', 'Assembly', 'Ideal']
     plot_common(current, filename_base, ycols, labels, categories)
 
 
-def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None, logy_base=None, color_map=None, bg_color=(1, 1, 1)):
-    xcol = 'cores'
+def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=None, logx_base=None, logy_base=None, color_map=None, bg_color=(1, 1, 1),
+                ):
+    xlabels = {'cores': '\# Cores', 'grids.total_macro_cells': '\# Macro Cells'}
     fig = plt.figure()
     color_map = color_map or color_util.discrete_cmap(len(labels), bg_color=bg_color)
     subplot = current.plot(x=xcol, y=ycols, colormap=color_map)
     for i, line in enumerate(subplot.lines):
         line.set_marker(MARKERS[i])
-    plt.ylabel('Speedup')
-    plt.xlabel('\# Cores')
+    plt.ylabel(series_name.capitalize())
+    plt.xlabel(xlabels[xcol])
     ax = subplot.figure.axes[0]
     if logx_base is not None:
         ax.set_xscale('log', basex=logx_base)
@@ -178,7 +235,7 @@ def plot_common(current, filename_base, ycols, labels, bar=None, logx_base=None,
     lgd.get_frame().set_facecolor(bg_color)
 
     for fmt in FIGURE_OUTPUTS:
-        plt.savefig(filename_base + '_speedup.{}'.format(fmt), bbox_extra_artists=(lgd,), bbox_inches='tight')
+        plt.savefig(filename_base + '_{}.{}'.format(series_name,fmt), bbox_extra_artists=(lgd,), bbox_inches='tight')
 
     if bar is None:
         return
