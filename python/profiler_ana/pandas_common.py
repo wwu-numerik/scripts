@@ -28,7 +28,9 @@ SPECIALS = ['run', 'threads', 'ranks', 'cores']
 MARKERS = ['s', 'o', 4, 5, 7, '|', '*', 1, 2, 3, 4, 6, 7]
 FIGURE_OUTPUTS = ['png', 'eps', 'svg']
 
-# pd.options.display.mpl_style = 'default'
+#pd.options.display.mpl_style = 'default'
+import matplotlib
+matplotlib.style.use('ggplot')
 matplotlib.rc('font', family='sans-serif')
 # http://nerdjusttyped.blogspot.de/2010/07/type-1-fonts-and-matplotlib-figures.html
 matplotlib.rcParams['ps.useafm'] = True
@@ -215,7 +217,8 @@ def plot_fem(current, filename_base, series_name=None, xcol=None):
     plot_common(current, filename_base, ycols, labels, categories)
 
 
-def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=None, logx_base=None, logy_base=None, color_map=None, bg_color=(1, 1, 1),
+greyish=0.9
+def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=None, logx_base=None, logy_base=None, color_map=None, bg_color=(greyish, greyish, greyish),
                 ):
     xlabels = {'cores': '\# Cores', 'grids.total_macro_cells': '\# Macro Cells'}
     fig = plt.figure()
