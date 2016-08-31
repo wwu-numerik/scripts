@@ -1,3 +1,6 @@
 [submodule "git-hooks"]
 	path = git-hooks
 	url = https://github.com/wwu-numerik/git-hooks
+[submodule "python/pylicense"]
+	path = python/pylicense
+	url = https://github.com/dune-community/pylicense
