@@ -9,7 +9,7 @@ import format_check as fc
 README = '''
 The code you have published does not conform to the project's coding style
  (see also https://github.com/{slug}/blob/master/CONTRIBUTING.md).
-We have automatically applied clang-fromat for your published code, for your convenience.
+We have automatically applied clang-format for your published code, for your convenience.
 Please consider applying clang-format locally before commiting the next time (for instance by installing a pre-commit
 hook found in https://github.com/wwu-numerik/git-hooks).
 
