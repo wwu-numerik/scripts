@@ -5,7 +5,8 @@ import subprocess
 import sys
 
 # Set to None for no filtering, otherwise commits to squash must start with this
-MSG_PREFIX = 'Updated documentation'
+MSG_PREFIX = None
+
 
 def _reset_master():
     new_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], universal_newlines=True).strip()
@@ -18,16 +19,23 @@ def first_run(base):
     env = os.environ.copy()
     # rerun ourselves to select which actions to do on which commits
     env['GIT_SEQUENCE_EDITOR'] = os.path.abspath(__file__)
-    #for commits getting squashed use online the first line of commit message
+    # during reword, mark commits for autosquashing
     env['EDITOR'] = 'sed -i -e "1s/^/squash\!\ /" -e 1q'
     # edit mode
     subprocess.check_call(['git', 'rebase', '-i', '--root', 'HEAD'], env=env)
     _reset_master()
 
-    # squash everything marked, do not open an editor
+    # squash everything marked
     del env['GIT_SEQUENCE_EDITOR']
     env['EDITOR'] = 'true'
     subprocess.check_output(['git', 'rebase', '--autosquash', '-i', '--root', 'HEAD'], env=env)
+    _reset_master()
+
+    # And another pass to cleanup logs
+    # reword every commit, remove "squash! *" and empty lines
+    env['GIT_SEQUENCE_EDITOR'] = 'sed -i -e "s/pick/r/g"'
+    env['EDITOR'] = "sed -i -n '/squash\!\|^\s*$/!p'"
+    subprocess.check_call(['git', 'rebase', '-i', '--root', 'HEAD'], env=env)
     _reset_master()
 
 
@@ -41,7 +49,7 @@ def edit_mode(git_input):
             # not a useful line
             continue
         if message in combos and ((MSG_PREFIX and message.startswith(MSG_PREFIX)) or MSG_PREFIX is None):
-                line = 'r {} squash! {}'.format(commit, message)
+            line = 'r {} squash! {}'.format(commit, message)
         else:
             combos.add(message)
         print(line)
