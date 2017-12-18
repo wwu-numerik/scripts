@@ -16,9 +16,9 @@ def plot_block(current, filename_base, series_name=None, xcol=None):
     categories = ['all', 'discretize', 'solve']
     ycols = ['{}.{}_avg_wall_{}'.format(method, v, series_name) for v in categories] + ['ideal_{}'.format(series_name)]
     bar_cols = ['{}.{}_avg_wall_abspart'.format(method, v) for v in categories[1:]]
-    labels = ['Overall', 'Discretization', 'BiCGStab'] + ['Ideal']
+    labels = ['Overall', 'Assembly', 'BiCGStab'] + ['Ideal']
     pc.plot_common(current, filename_base, ycols, labels,
-                bar=(bar_cols,['Discretization', 'BiCGStab']), xcol=xcol,
+                bar=(bar_cols,['Assembly', 'BiCGStab']), xcol=xcol,
                 series_name=series_name)
 
 

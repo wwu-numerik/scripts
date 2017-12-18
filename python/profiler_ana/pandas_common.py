@@ -1,6 +1,9 @@
 import math
 import pprint
 
+from matplotlib import gridspec
+from matplotlib.ticker import NullLocator
+
 __author__ = 'r_milk01'
 
 import os
@@ -261,8 +264,8 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
     ax.set_ylim((yb-ymargin, yt+ymargin))
     lgd.get_frame().set_facecolor(bg_color)
 
-    for fmt in FIGURE_OUTPUTS:
-        plt.savefig(filename_base + '_{}.{}'.format(series_name,fmt), bbox_extra_artists=(lgd,), )
+    # for fmt in FIGURE_OUTPUTS:
+    #     plt.savefig(filename_base + '_{}.{}'.format(series_name,fmt), bbox_extra_artists=(lgd,), )
 
     if bar is None:
         return
@@ -274,24 +277,43 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
     per_row = 4
     col_count = len(cols) if len(cols) < per_row else per_row
     layout = (len(cols) // col_count + 1, col_count)
-    axes = cr.plot(kind='pie', subplots=True, colormap=color_map, startangle=0, labels=None,
-                   title=title, autopct='$%.2f\\%% $', layout=layout)
-    for i,ax in enumerate(axes.flatten()):
+    radius = 0.51
+    datarows = len(current)
+
+    # donot
+
+    for i in range(1,datarows+1):
+        ax = plt.subplot(layout[0], layout[1], i)
+        cr[i-1].plot(kind='pie', subplots=False, colormap=color_map, startangle=20, labels=None,
+                       autopct='$%.2f\\%% $', layout=layout, pctdistance=1.25,
+                       radius=radius, ax=ax)
         ax.set_ylabel('')
-        lgd = plt.legend(labels=labels,  ncol=per_row, borderaxespad=1., loc='upper center',
-                         bbox_to_anchor=(0.5, 0.1),
-                     bbox_transform=plt.gcf().transFigure)
-        if i < len(axes) - 1:
-            lgd.remove()
-    for fmt in FIGURE_OUTPUTS:
-        plt.savefig(filename_base + '_pie.{}'.format(fmt), bbox_extra_artists=(lgd,))
+        # setting radius is possbile if we comment next line
+        ax.axis('equal')
 
+        if i < datarows - 1:
+            lgd = plt.legend(labels=labels, ncol=per_row, borderaxespad=1., loc='upper center',
+                             bbox_to_anchor=(0.5, 0.1),
+                             bbox_transform=plt.gcf().transFigure)
+        my_circle = plt.Circle((0, 0), radius=radius*0.75, color='white')
+        ax.add_patch(my_circle)
+        ax.text(x=0, y=0, s='{}\ncores'.format(current['cores'][i-1]), color='black',
+                ha='center', va='center')
+    plt.suptitle(title)
 
-    ax = current[cols].plot(kind='bar', stacked=True, colormap=color_map, title=title)
-    patches, _ = ax.get_legend_handles_labels()
-    lgd = ax.legend(patches, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.98, bottom=0.08)
+
     for fmt in FIGURE_OUTPUTS:
-        plt.savefig(filename_base + '_bar.{}'.format(fmt), bbox_extra_artists=(lgd,))
+        plt.savefig(filename_base + '_pie.{}'.format(fmt), bbox_extra_artists=(lgd, ),
+                    bbox_inches='tight', dpi=1200)
+
+    # # bar
+    # ax = current[cols].plot(kind='bar', stacked=False, colormap=color_map, title=title)
+    # patches, _ = ax.get_legend_handles_labels()
+    # lgd = ax.legend(patches, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
+    # for fmt in FIGURE_OUTPUTS:
+    #     plt.savefig(filename_base + '_bar.{}'.format(fmt), bbox_extra_artists=(lgd,))
 
 
 def plot_error(data_frame, filename_base, error_cols, xcol, labels, baseline_name,
