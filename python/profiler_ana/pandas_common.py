@@ -1,4 +1,5 @@
 import math
+import pprint
 
 __author__ = 'r_milk01'
 
@@ -233,6 +234,7 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
                 margin=(0.05,0.05)):
     class mdict(dict):
         def __missing__(self, key):
+            key = key.replace('_', ' ')
             return key
     texsafe = mdict({'cores': '\# Cores', 'grids.total_macro_cells': '\# Macro Cells',
                'parallel_efficiency': 'Parallel efficiency'})
@@ -254,9 +256,9 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
     xl, xr = ax.get_xlim()
     xmargin = math.fabs(xl-xr) * margin[0]
     ax.set_xlim((xl-xmargin, xr+xmargin))
-    yl, yr = ax.get_ylim()
-    xmargin = math.fabs(yl-yr) * margin[1]
-    ax.set_ylim((yl-xmargin, yr+xmargin))
+    yb, yt = ax.get_ylim()
+    ymargin = math.fabs(yb-yt) * margin[1]
+    ax.set_ylim((yb-ymargin, yt+ymargin))
     lgd.get_frame().set_facecolor(bg_color)
 
     for fmt in FIGURE_OUTPUTS:
@@ -265,13 +267,31 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
     if bar is None:
         return
     cols, labels = bar
-    fig = plt.figure()
-    ax = current[cols].plot(kind='bar', stacked=True, colormap=color_map)
+    labels = [texsafe[l] for l in labels]
+
+    title = 'Runtime distribution'
+    cr = current[cols].transpose()
+    per_row = 4
+    col_count = len(cols) if len(cols) < per_row else per_row
+    layout = (len(cols) // col_count + 1, col_count)
+    axes = cr.plot(kind='pie', subplots=True, colormap=color_map, startangle=0, labels=None,
+                   title=title, autopct='$%.2f\\%% $', layout=layout)
+    for i,ax in enumerate(axes.flatten()):
+        ax.set_ylabel('')
+        lgd = plt.legend(labels=labels,  ncol=per_row, borderaxespad=1., loc='upper center',
+                         bbox_to_anchor=(0.5, 0.1),
+                     bbox_transform=plt.gcf().transFigure)
+        if i < len(axes) - 1:
+            lgd.remove()
+    for fmt in FIGURE_OUTPUTS:
+        plt.savefig(filename_base + '_pie.{}'.format(fmt), bbox_extra_artists=(lgd,))
+
+
+    ax = current[cols].plot(kind='bar', stacked=True, colormap=color_map, title=title)
     patches, _ = ax.get_legend_handles_labels()
-
     lgd = ax.legend(patches, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
-
-    plt.savefig(filename_base + '_pie.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+    for fmt in FIGURE_OUTPUTS:
+        plt.savefig(filename_base + '_bar.{}'.format(fmt), bbox_extra_artists=(lgd,))
 
 
 def plot_error(data_frame, filename_base, error_cols, xcol, labels, baseline_name,
