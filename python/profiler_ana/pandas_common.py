@@ -37,11 +37,13 @@ matplotlib.rcParams['ps.useafm'] = True
 matplotlib.rcParams['pdf.use14corefonts'] = True
 matplotlib.rcParams['text.usetex'] = True
 
+
 def common_substring(strings, glue='_'):
     first, last = strings[0], strings[-1]
     seq = difflib.SequenceMatcher(None, first, last, autojunk=False)
     mb = seq.get_matching_blocks()
     return glue.join([first[m.a:m.a + m.size] for m in mb]).replace(os.path.sep, '')
+
 
 def make_val(val, round_digits=3):
     try:
@@ -58,7 +60,7 @@ def m_strip(s, timings=None, measures=None):
     return s
 
 
-def read_files(dirnames, specials=None):
+def read_files(dirnames, specials=None, cellcount=1):
     current = None
     specials = specials or SPECIALS
     header = {'memory': [], 'profiler': [], 'params': [], 'errors': []}
@@ -78,8 +80,11 @@ def read_files(dirnames, specials=None):
         p = {}
         for section in params.sections():
             p.update({'{}.{}'.format(section, n): make_val(v) for n, v in params.items(section)})
-        p['grids.total_macro_cells'] = math.pow(p['grids.macro_cells_per_dim'],p['grids.dim'])
-        p['grids.total_fine_cells'] = p['grids.total_macro_cells'] * math.pow(p['grids.micro_cells_per_macrocell_dim'],p['grids.dim'])
+        try:
+            p['grids.total_macro_cells'] = math.pow(p['grids.macro_cells_per_dim'],p['grids.dim'])
+            p['grids.total_fine_cells'] = p['grids.total_macro_cells'] * math.pow(p['grids.micro_cells_per_macrocell_dim'],p['grids.dim'])
+        except KeyError:
+            p['grids.total_macro_cells'] = p['grids.total_fine_cells'] = cellcount
         param = pd.DataFrame(p, index=[0])
         # mem
         mem = os.path.join(fn, 'memory.csv')
@@ -104,7 +109,7 @@ def read_files(dirnames, specials=None):
     current.insert(len(specials), 'ideal_speedup', pd.Series(values))
     cores = [cmp_value(i) for i in range(0, count)]
     current.insert(len(specials), 'cores', pd.Series(cores))
-
+    current.insert(len(specials), 'ideal_parallel_efficiency', pd.Series([1 for _ in range(0, count)]))
     return header, current
 
 
@@ -128,6 +133,10 @@ def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, t
             ref_value = source[0]
             values = [round(ref_value / source[i], round_digits) for i in range(len(source))]
             current[speedup_col] = pd.Series(values)
+
+            values = [current[speedup_col][i] / current['ideal_speedup'][i] for i in range(len(source))]
+            current[source_col+'_parallel_efficiency'] = pd.Series(values)
+
 
             # relative part of overall absolut timing category
             abspart_col = source_col + '_abspart'
@@ -208,6 +217,7 @@ def plot_msfem(current, filename_base, series_name=None, xcol=None):
                 bar=(bar_cols,['Coarse solve', 'Local assembly + solve', 'Coarse assembly']), xcol=xcol,
                 series_name=series_name, logx_base=2, logy_base=2)
 
+
 def plot_fem(current, filename_base, series_name=None, xcol=None):
     xcol = xcol or 'cores'
     series_name = series_name or 'speedup'
@@ -218,27 +228,39 @@ def plot_fem(current, filename_base, series_name=None, xcol=None):
 
 
 greyish=0.9
-def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=None, logx_base=None, logy_base=None, color_map=None, bg_color=(greyish, greyish, greyish),
-                ):
-    xlabels = {'cores': '\# Cores', 'grids.total_macro_cells': '\# Macro Cells'}
+def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=None, logx_base=None,
+                logy_base=None, color_map=None, bg_color=(greyish, greyish, greyish),
+                margin=(0.05,0.05)):
+    class mdict(dict):
+        def __missing__(self, key):
+            return key
+    texsafe = mdict({'cores': '\# Cores', 'grids.total_macro_cells': '\# Macro Cells',
+               'parallel_efficiency': 'Parallel efficiency'})
     fig = plt.figure()
     color_map = color_map or color_util.discrete_cmap(len(labels), bg_color=bg_color)
     subplot = current.plot(x=xcol, y=ycols, colormap=color_map)
     for i, line in enumerate(subplot.lines):
         line.set_marker(MARKERS[i])
-    plt.ylabel(series_name.capitalize())
-    plt.xlabel(xlabels[xcol])
+    plt.ylabel(texsafe[series_name].capitalize())
+    plt.xlabel(texsafe[xcol])
     ax = subplot.figure.axes[0]
     if logx_base is not None:
         ax.set_xscale('log', basex=logx_base)
     if logy_base is not None:
         ax.set_yscale('log', basey=logy_base)
     lgd = plt.legend(ax.lines, labels, loc=2)#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
-    ax.set_axis_bgcolor(bg_color)
+    ax.set_facecolor(bg_color)
+
+    xl, xr = ax.get_xlim()
+    xmargin = math.fabs(xl-xr) * margin[0]
+    ax.set_xlim((xl-xmargin, xr+xmargin))
+    yl, yr = ax.get_ylim()
+    xmargin = math.fabs(yl-yr) * margin[1]
+    ax.set_ylim((yl-xmargin, yr+xmargin))
     lgd.get_frame().set_facecolor(bg_color)
 
     for fmt in FIGURE_OUTPUTS:
-        plt.savefig(filename_base + '_{}.{}'.format(series_name,fmt), bbox_extra_artists=(lgd,), bbox_inches='tight')
+        plt.savefig(filename_base + '_{}.{}'.format(series_name,fmt), bbox_extra_artists=(lgd,), )
 
     if bar is None:
         return
