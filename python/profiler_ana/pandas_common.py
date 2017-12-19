@@ -32,7 +32,7 @@ SPECIALS = ['run', 'threads', 'ranks', 'cores']
 MARKERS = ['s', 'o', 4, 5, 7, '|', '*', 1, 2, 3, 4, 6, 7]
 FIGURE_OUTPUTS = ['png', 'eps', 'svg']
 
-#pd.options.display.mpl_style = 'default'
+
 import matplotlib
 matplotlib.style.use('ggplot')
 matplotlib.rc('font', family='sans-serif')
@@ -40,7 +40,7 @@ matplotlib.rc('font', family='sans-serif')
 matplotlib.rcParams['ps.useafm'] = True
 matplotlib.rcParams['pdf.use14corefonts'] = True
 matplotlib.rcParams['text.usetex'] = True
-
+# plt.xkcd()
 
 def common_substring(strings, glue='_'):
     first, last = strings[0], strings[-1]
@@ -210,7 +210,7 @@ def scaleup(headerlist, current, baseline_name, specials=None, round_digits=3, t
     return current
 
 
-def plot_msfem(current, filename_base, series_name=None, xcol=None):
+def plot_msfem(current, filename_base, series_name=None, xcol=None, baseline_name=None):
     xcol = xcol or 'cores'
     series_name = series_name or 'speedup'
     categories = ['all', 'coarse.solve', 'local.solve_for_all_cells', 'coarse.assemble']
@@ -219,22 +219,22 @@ def plot_msfem(current, filename_base, series_name=None, xcol=None):
     labels = ['Overall', 'Coarse solve', 'Local assembly + solve', 'Coarse assembly'] + ['Ideal']
     plot_common(current, filename_base, ycols, labels,
                 bar=(bar_cols,['Coarse solve', 'Local assembly + solve', 'Coarse assembly']), xcol=xcol,
-                series_name=series_name, logx_base=2, logy_base=2)
+                series_name=series_name, baseline_name=baseline_name)
 
 
-def plot_fem(current, filename_base, series_name=None, xcol=None):
+def plot_fem(current, filename_base, series_name=None, xcol=None, baseline_name=None):
     xcol = xcol or 'cores'
     series_name = series_name or 'speedup'
     categories = ['apply', 'solve', 'constraints', 'assemble']
     ycols = ['fem.{}_avg_wall_speedup'.format(v) for v in categories] + ['ideal_speedup']
     labels = ['Overall', 'Solve', 'Constraints', 'Assembly', 'Ideal']
-    plot_common(current, filename_base, ycols, labels, categories)
+    plot_common(current, filename_base, ycols, labels, categories, baseline_name=baseline_name)
 
 
 greyish=0.9
 def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=None, logx_base=None,
                 logy_base=None, color_map=None, bg_color=(greyish, greyish, greyish),
-                margin=(0.05,0.05)):
+                margin=(0.05,0.05), baseline_name=None):
     class mdict(dict):
         def __missing__(self, key):
             key = key.replace('_', ' ')
@@ -265,26 +265,33 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
     lgd.get_frame().set_facecolor(bg_color)
 
     # for fmt in FIGURE_OUTPUTS:
-    #     plt.savefig(filename_base + '_{}.{}'.format(series_name,fmt), bbox_extra_artists=(lgd,), )
+    #     plt.savefig(filename_base + '_{}.{}'.format(series_name,fmt), bbox_extra_artists=(lgd,),
+    #                 dpi=1200)
 
     if bar is None:
         return
     cols, labels = bar
-    labels = [texsafe[l] for l in labels]
+    selection = current[cols]
 
-    title = 'Runtime distribution'
-    cr = current[cols].transpose()
+    if baseline_name:
+        baseline = current[baseline_name+'_avg_wall_abspart']
+        current['remainder'] = baseline - selection.transpose().sum()
+        cols.append('remainder')
+        labels.append('Remainder')
+        selection = current[cols]
+
+    labels = [texsafe[l] for l in labels]
+    donot_data = selection.transpose()
     per_row = 4
     col_count = len(cols) if len(cols) < per_row else per_row
     layout = (len(cols) // col_count + 1, col_count)
     radius = 0.51
-    datarows = len(current)
+    datarows = len(selection)
 
     # donot
-
     for i in range(1,datarows+1):
         ax = plt.subplot(layout[0], layout[1], i)
-        cr[i-1].plot(kind='pie', subplots=False, colormap=color_map, startangle=20, labels=None,
+        donot_data[i-1].plot(kind='pie', subplots=False, colormap=color_map, startangle=0, labels=None,
                        autopct='$%.2f\\%% $', layout=layout, pctdistance=1.25,
                        radius=radius, ax=ax)
         ax.set_ylabel('')
@@ -299,21 +306,27 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
         ax.add_patch(my_circle)
         ax.text(x=0, y=0, s='{}\ncores'.format(current['cores'][i-1]), color='black',
                 ha='center', va='center')
-    plt.suptitle(title)
-
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.98, bottom=0.08)
 
     for fmt in FIGURE_OUTPUTS:
         plt.savefig(filename_base + '_pie.{}'.format(fmt), bbox_extra_artists=(lgd, ),
                     bbox_inches='tight', dpi=1200)
 
-    # # bar
-    # ax = current[cols].plot(kind='bar', stacked=False, colormap=color_map, title=title)
-    # patches, _ = ax.get_legend_handles_labels()
-    # lgd = ax.legend(patches, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
-    # for fmt in FIGURE_OUTPUTS:
-    #     plt.savefig(filename_base + '_bar.{}'.format(fmt), bbox_extra_artists=(lgd,))
+    # bar
+    xticks = ['{}\ncores'.format(current['cores'][i]) for i in range(datarows)]
+    ax = selection.plot(kind='bar', stacked=True, colormap=color_map,)
+    for p in ax.patches:
+        l, r = (p.get_x()+p.get_width()/2,p.get_y()+p.get_height()/2)
+        bbox_props = dict(boxstyle="round,pad=0.1", fc="white", alpha=0.6)
+        ax.text(l, r, str(round(p.get_height(),2 )), bbox=bbox_props,
+                    ha='center', )
+        ax.set_xticklabels(xticks, rotation=0, ha='center')
+    patches, _ = ax.get_legend_handles_labels()
+    lgd = ax.legend(patches, labels=labels, ncol=per_row, borderaxespad=1., loc='lower center',
+                     bbox_to_anchor=(0.5, -0.05),
+                     bbox_transform=plt.gcf().transFigure)
+    for fmt in FIGURE_OUTPUTS:
+        plt.savefig(filename_base + '_bar.{}'.format(fmt), bbox_extra_artists=(lgd,),
+                    bbox_inches='tight', dpi=1200)
 
 
 def plot_error(data_frame, filename_base, error_cols, xcol, labels, baseline_name,
@@ -338,8 +351,9 @@ def plot_error(data_frame, filename_base, error_cols, xcol, labels, baseline_nam
         ax.set_xscale('log', basex=logx_base)
     if logy_base is not None:
         ax.set_yscale('log', basey=logy_base)
-    lgd = plt.legend(ax.lines, labels, loc=2)#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
+    lgd = plt.legend(ax.lines, labels, loc='lower center')#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
     common = common_substring(error_cols)
     for fmt in FIGURE_OUTPUTS:
-        plt.savefig( '{}_{}.{}'.format(filename_base, common, fmt), bbox_extra_artists=(lgd,), bbox_inches='tight')
+        plt.savefig( '{}_{}.{}'.format(filename_base, common, fmt), bbox_extra_artists=(lgd,),
+                     bbox_inches='tight', dpi=1200)

@@ -27,8 +27,8 @@ headerlist = header['profiler']
 current = pc.sorted_f(current, True)
 current = pc.speedup(headerlist, current, baseline_name)
 # pprint(t_sections)
-plot_block(current, merged)
-plot_block(current, merged, series_name='parallel_efficiency')
+plot_block(current, merged, baseline_name=baseline_name)
+plot_block(current, merged, series_name='parallel_efficiency', baseline_name=baseline_name)
 
 current.transpose().to_csv(merged)
 # current.transpose().to_excel(merged+'.xls')

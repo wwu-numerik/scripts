@@ -27,6 +27,6 @@ current = pc.sorted_f(current, True)
 # full.transpose().to_csv(merged)
 current = pc.speedup(headerlist, current, baseline_name)
 # pprint(t_sections)
-plot_mlmc(current, merged)
+plot_mlmc(current, merged, baseline_name=baseline_name)
 
 current.transpose().to_csv('filtered_' + merged)
