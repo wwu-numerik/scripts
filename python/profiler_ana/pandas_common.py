@@ -42,6 +42,19 @@ matplotlib.rcParams['pdf.use14corefonts'] = True
 matplotlib.rcParams['text.usetex'] = True
 # plt.xkcd()
 
+greyish=0.9
+
+
+class mdict(dict):
+    def __missing__(self, key):
+        key = key.replace('_', ' ')
+        return key
+
+
+texsafe = mdict({'cores': '\# Cores', 'grids.total_macro_cells': '\# Macro Cells',
+                 'parallel_efficiency': 'Parallel efficiency'})
+
+
 def common_substring(strings, glue='_'):
     first, last = strings[0], strings[-1]
     seq = difflib.SequenceMatcher(None, first, last, autojunk=False)
@@ -49,7 +62,7 @@ def common_substring(strings, glue='_'):
     return glue.join([first[m.a:m.a + m.size] for m in mb]).replace(os.path.sep, '')
 
 
-def make_val(val, round_digits=3):
+def make_val(val, round_digits=8):
     try:
         return round(float(val), round_digits)
     except ValueError:
@@ -69,7 +82,7 @@ def read_files(dirnames, specials=None, cellcount=1):
     specials = specials or SPECIALS
     header = {'memory': [], 'profiler': [], 'params': [], 'errors': []}
     for fn in dirnames:
-        assert os.path.isdir(fn)
+        assert os.path.isdir(fn), fn
         prof = os.path.join(fn, 'profiler.csv')
         try:
             new = pd.read_csv(prof)
@@ -231,16 +244,17 @@ def plot_fem(current, filename_base, series_name=None, xcol=None, baseline_name=
     plot_common(current, filename_base, ycols, labels, categories, baseline_name=baseline_name)
 
 
-greyish=0.9
+def _set_ax_margin(ax, margin=(0.05, 0.05)):
+    xl, xr = ax.get_xlim()
+    xmargin = math.fabs(xl-xr) * margin[0]
+    ax.set_xlim((xl-xmargin, xr+xmargin))
+    yb, yt = ax.get_ylim()
+    ymargin = math.fabs(yb-yt) * margin[1]
+    ax.set_ylim((yb-ymargin, yt+ymargin))
+
 def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=None, logx_base=None,
                 logy_base=None, color_map=None, bg_color=(greyish, greyish, greyish),
                 margin=(0.05,0.05), baseline_name=None):
-    class mdict(dict):
-        def __missing__(self, key):
-            key = key.replace('_', ' ')
-            return key
-    texsafe = mdict({'cores': '\# Cores', 'grids.total_macro_cells': '\# Macro Cells',
-               'parallel_efficiency': 'Parallel efficiency'})
     fig = plt.figure()
     color_map = color_map or color_util.discrete_cmap(len(labels), bg_color=bg_color)
     subplot = current.plot(x=xcol, y=ycols, colormap=color_map)
@@ -256,17 +270,13 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
     lgd = plt.legend(ax.lines, labels, loc=2)#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
     ax.set_facecolor(bg_color)
 
-    xl, xr = ax.get_xlim()
-    xmargin = math.fabs(xl-xr) * margin[0]
-    ax.set_xlim((xl-xmargin, xr+xmargin))
-    yb, yt = ax.get_ylim()
-    ymargin = math.fabs(yb-yt) * margin[1]
-    ax.set_ylim((yb-ymargin, yt+ymargin))
+    _set_ax_margin(ax, margin)
+
     lgd.get_frame().set_facecolor(bg_color)
 
-    # for fmt in FIGURE_OUTPUTS:
-    #     plt.savefig(filename_base + '_{}.{}'.format(series_name,fmt), bbox_extra_artists=(lgd,),
-    #                 dpi=1200)
+    for fmt in FIGURE_OUTPUTS:
+        plt.savefig(filename_base + '_{}.{}'.format(series_name,fmt), bbox_extra_artists=(lgd,),
+                    dpi=1200)
 
     if bar is None:
         return
@@ -308,7 +318,7 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
                 ha='center', va='center')
 
     for fmt in FIGURE_OUTPUTS:
-        plt.savefig(filename_base + '_pie.{}'.format(fmt), bbox_extra_artists=(lgd, ),
+        plt.savefig(filename_base + '_distribution_pie.{}'.format(fmt), bbox_extra_artists=(lgd, ),
                     bbox_inches='tight', dpi=1200)
 
     # bar
@@ -325,35 +335,34 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
                      bbox_to_anchor=(0.5, -0.05),
                      bbox_transform=plt.gcf().transFigure)
     for fmt in FIGURE_OUTPUTS:
-        plt.savefig(filename_base + '_bar.{}'.format(fmt), bbox_extra_artists=(lgd,),
+        plt.savefig(filename_base + '_distribution_bar.{}'.format(fmt), bbox_extra_artists=(lgd,),
                     bbox_inches='tight', dpi=1200)
 
 
 def plot_error(data_frame, filename_base, error_cols, xcol, labels, baseline_name,
                logx_base=None, logy_base=None, color_map=None):
-    fig = plt.figure()
-
-    #normed walltime
-    normed = 'normed_walltime'
-    w_time = data_frame['{}_avg_wall'.format(baseline_name)]
-    count = len(w_time)
-    values = [w_time[i] / w_time.max() for i in range(0, count)]
-    data_frame.insert(0, normed, pd.Series(values))
+    wallt = '{}_avg_wall'.format(baseline_name)
+    select = error_cols + [wallt, xcol]
+    data = data_frame.copy()[select]
+    for i in error_cols + [wallt]:
+        data[i] /= data[i].max()
 
     color_map = color_map or color_util.discrete_cmap(len(labels))
-    foo = data_frame.plot(x=xcol, y=error_cols+[normed], colormap=color_map)
-    for i, line in enumerate(foo.lines):
+    ax = data.plot(x=xcol, y=error_cols+[wallt], colormap=color_map)
+    for i, line in enumerate(ax.lines):
         line.set_marker(MARKERS[i])
-    plt.ylabel('Error')
-    plt.xlabel('Cells')
-    ax = fig.axes[0]
+    plt.ylabel('Normalized Error/Walltime')
+    plt.xlabel(xcol)
+
     if logx_base is not None:
         ax.set_xscale('log', basex=logx_base)
     if logy_base is not None:
         ax.set_yscale('log', basey=logy_base)
+    _set_ax_margin(ax)
     lgd = plt.legend(ax.lines, labels, loc='lower center')#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
     common = common_substring(error_cols)
     for fmt in FIGURE_OUTPUTS:
-        plt.savefig( '{}_{}.{}'.format(filename_base, common, fmt), bbox_extra_artists=(lgd,),
+        plt.savefig( '{}_error_{}_{}.{}'.format(filename_base, common, xcol, fmt), bbox_extra_artists=(lgd,),
                      bbox_inches='tight', dpi=1200)
+

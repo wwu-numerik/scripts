@@ -10,7 +10,7 @@ method = 'block_ipdg'
 baseline_name = '{}.all'.format(method)
 
 
-def plot_block(current, filename_base, series_name=None, xcol=None):
+def plot_block(current, filename_base, series_name=None, xcol=None, baseline_name=None):
     xcol = xcol or 'cores'
     series_name = series_name or 'speedup'
     categories = ['all', 'discretize', 'solve']
@@ -19,7 +19,7 @@ def plot_block(current, filename_base, series_name=None, xcol=None):
     labels = ['Overall', 'Assembly', 'BiCGStab'] + ['Ideal']
     pc.plot_common(current, filename_base, ycols, labels,
                 bar=(bar_cols,['Assembly', 'BiCGStab']), xcol=xcol,
-                series_name=series_name)
+                series_name=series_name, baseline_name=baseline_name)
 
 
 header, current = pc.read_files(sys.argv[1:])
