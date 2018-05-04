@@ -32,3 +32,5 @@ do
 
     sleep 60
 done
+# return exit code of background process
+wait $!
