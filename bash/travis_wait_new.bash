@@ -16,11 +16,12 @@ cmd="$@"
 
 # running cmd at background
 ${cmd} &
+cmd_pid=$!
 
 # ping per minutes
 MINUTES=0
 LIMIT=${TIMEOUT}
-while kill -0 $! >/dev/null 2>&1;
+while kill -0 ${cmd_pid} >/dev/null 2>&1;
 do
     echo -n -e " \b"  # never leave evidence
 
@@ -33,4 +34,4 @@ do
     sleep 60
 done
 # return exit code of background process
-wait $!
+wait ${cmd_pid}
