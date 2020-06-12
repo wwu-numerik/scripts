@@ -4,10 +4,8 @@ __author__ = 'r_milk01'
 
 import os
 import pandas as pd
-try:
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import SafeConfigParser
+from configparser import ConfigParser
+
 import matplotlib.pyplot as plt
 import matplotlib
 import itertools
@@ -26,14 +24,28 @@ SPECIALS = ['run', 'threads', 'ranks', 'cores']
            u'H': u'hexagon2', u'v': u'triangle_down', u'8': u'octagon', u'<': u'triangle_left', u'>': u'triangle_right'}
 '''
 MARKERS = ['s', 'o', 4, 5, 7, '|', '*', 1, 2, 3, 4, 6, 7]
-FIGURE_OUTPUTS = ['png', 'eps', 'svg']
+FIGURE_OUTPUTS = ['png', 'eps', 'pdf', 'pgf']
 
 # pd.options.display.mpl_style = 'default'
-matplotlib.rc('font', family='sans-serif')
+# matplotlib.rc('font', family='sans-serif')
+# matplotlib.rc('xtick', labelsize=20)
+# matplotlib.rc('ytick', labelsize=20)
+SMALL_SIZE = 11
+MEDIUM_SIZE = 13
+BIGGER_SIZE = 16
+matplotlib.rc('font', size=MEDIUM_SIZE, family='sans-serif')          # controls default text sizes
+matplotlib.rc('axes', titlesize=BIGGER_SIZE)     # fontsize of the axes title
+matplotlib.rc('axes', labelsize=BIGGER_SIZE)    # fontsize of the x and y labels
+matplotlib.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+matplotlib.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+matplotlib.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+matplotlib.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
 # http://nerdjusttyped.blogspot.de/2010/07/type-1-fonts-and-matplotlib-figures.html
 matplotlib.rcParams['ps.useafm'] = True
-matplotlib.rcParams['pdf.use14corefonts'] = True
 matplotlib.rcParams['text.usetex'] = True
+matplotlib.rcParams['pgf.texsystem'] = 'pdflatex'
+
 
 def common_substring(strings, glue='_'):
     first, last = strings[0], strings[-1]
@@ -108,7 +120,7 @@ def read_files(dirnames, specials=None):
 
 def sorted_f(frame, ascending=True, sort_cols=None):
     sort_cols = sort_cols or ['ranks', 'threads']
-    return frame.sort(columns=sort_cols, na_position='last', ascending=ascending)
+    return frame.sort_values(by=sort_cols, na_position='last', ascending=ascending)
 
 
 def speedup(headerlist, current, baseline_name, specials=None, round_digits=3, timings=None, measures=None):
@@ -195,16 +207,28 @@ def scaleup(headerlist, current, baseline_name, specials=None, round_digits=3, t
     return current
 
 
-def plot_msfem(current, filename_base, series_name=None, xcol=None):
+def plot_msfem(current, filename_base, series_name=None, xcol=None, original=None):
     xcol = xcol or 'cores'
     series_name = series_name or 'speedup'
-    categories = ['all', 'coarse.solve', 'local.solve_for_all_cells', 'coarse.assemble']
-    ycols = ['msfem.{}_avg_wall_{}'.format(v, series_name) for v in categories] + ['ideal_{}'.format(series_name)]
-    bar_cols = ['msfem.{}_avg_wall_abspart'.format(v) for v in categories[1:]]
+    categories = ['Elliptic_MsFEM_Solver.apply', 'coarse.solve', 'local.solve_for_all_cells', 'coarse.assemble']
+    measure = 'usr'
+    ycols = ['msfem.{}_avg_{}_{}'.format(v, measure, series_name) for v in categories] + ['ideal_{}'.format(series_name)]
+    bar_cols = ['msfem.{}_avg_{}_abspart'.format(v, measure) for v in categories[1:]]
     labels = ['Overall', 'Coarse solve', 'Local assembly + solve', 'Coarse assembly'] + ['Ideal']
     plot_common(current, filename_base, ycols, labels,
                 bar=(bar_cols,['Coarse solve', 'Local assembly + solve', 'Coarse assembly']), xcol=xcol,
                 series_name=series_name, logx_base=2, logy_base=2)
+
+    ycols = ['msfem.{}_avg_{}'.format(v, measure) for v in categories]
+    for col in ycols:
+        original[col] = original[col] / 1000.
+    bar_cols = ['msfem.{}_avg_{}_abspart'.format(v, measure) for v in categories[1:]]
+    series_name = 'Time (s)'
+    labels = ['Overall', 'Coarse solve', 'Local assembly + solve', 'Coarse assembly']
+    plot_common(original, filename_base, ycols, labels,
+                bar=(bar_cols,['Coarse solve', 'Local assembly + solve', 'Coarse assembly']), xcol=xcol,
+                series_name=series_name, logx_base=2, logy_base=10, lgd_loc=6)
+
 
 def plot_fem(current, filename_base, series_name=None, xcol=None):
     xcol = xcol or 'cores'
@@ -215,12 +239,12 @@ def plot_fem(current, filename_base, series_name=None, xcol=None):
     plot_common(current, filename_base, ycols, labels, categories)
 
 
-def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=None, logx_base=None, logy_base=None, color_map=None, bg_color=(1, 1, 1),
-                ):
+def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=None, logx_base=None, logy_base=None,
+                color_map=None, bg_color=(1, 1, 1), lgd_loc=2):
     xlabels = {'cores': '\# Cores', 'grids.total_macro_cells': '\# Macro Cells'}
     fig = plt.figure()
     color_map = color_map or color_util.discrete_cmap(len(labels), bg_color=bg_color)
-    subplot = current.plot(x=xcol, y=ycols, colormap=color_map)
+    subplot = current.plot(x=xcol, y=ycols, colormap=color_map, figsize=(6.3, 3.5))
     for i, line in enumerate(subplot.lines):
         line.set_marker(MARKERS[i])
     plt.ylabel(series_name.capitalize())
@@ -230,9 +254,12 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
         ax.set_xscale('log', basex=logx_base)
     if logy_base is not None:
         ax.set_yscale('log', basey=logy_base)
-    lgd = plt.legend(ax.lines, labels, loc=2)#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
-    ax.set_axis_bgcolor(bg_color)
+    lgd = plt.legend(ax.lines, labels, loc=lgd_loc)#, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
+    ax.set_facecolor(bg_color)
     lgd.get_frame().set_facecolor(bg_color)
+
+    tt = current[xcol].array
+    plt.xticks(ticks=tt, labels=[str(t) for t in tt])
 
     for fmt in FIGURE_OUTPUTS:
         plt.savefig(filename_base + '_{}.{}'.format(series_name,fmt), bbox_extra_artists=(lgd,), bbox_inches='tight')
@@ -246,7 +273,7 @@ def plot_common(current, filename_base, ycols, labels, xcol, series_name, bar=No
 
     lgd = ax.legend(patches, labels, bbox_to_anchor=(1.05, 1),  borderaxespad=0., loc=2)
 
-    plt.savefig(filename_base + '_pie.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.savefig(f'{filename_base}_{series_name}_pie.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
 def plot_error(data_frame, filename_base, error_cols, xcol, labels, baseline_name,
@@ -258,15 +285,15 @@ def plot_error(data_frame, filename_base, error_cols, xcol, labels, baseline_nam
     w_time = data_frame['{}_avg_wall'.format(baseline_name)]
     count = len(w_time)
     values = [w_time[i] / w_time.max() for i in range(0, count)]
-    data_frame.insert(0, normed, pd.Series(values))
+    # data_frame.insert(0, normed, pd.Series(values))
 
     color_map = color_map or color_util.discrete_cmap(len(labels))
-    foo = data_frame.plot(x=xcol, y=error_cols+[normed], colormap=color_map)
-    for i, line in enumerate(foo.lines):
+    ax = data_frame.plot(x=xcol, y=error_cols, colormap=color_map)
+    for i, line in enumerate(ax.lines):
         line.set_marker(MARKERS[i])
     plt.ylabel('Error')
     plt.xlabel('Cells')
-    ax = fig.axes[0]
+
     if logx_base is not None:
         ax.set_xscale('log', basex=logx_base)
     if logy_base is not None:
